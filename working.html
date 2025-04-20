@@ -1,1206 +1,1432 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wave Defense TD Enhanced</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <style>
-        /* --- Base Styles (Keep as before) --- */
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #1a1a1a;
-            font-family: 'Press Start 2P', cursive;
-            color: #fff;
-            overflow: hidden;
-        }
-        #gameContainer {
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 95vw;
-            height: 90vh;
-            max-width: 1200px;
-        }
-        canvas {
-            background-color: #2b2b2b; /* Slightly lighter dark background */
-            display: block;
-            border: 3px solid #fff;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-            width: 100%;
-            height: auto;
-            max-height: 100%;
-            aspect-ratio: 16 / 9;
-            image-rendering: pixelated;
-            cursor: crosshair; /* Change cursor for aiming */
-        }
+<title>Top Down Defender</title>
+<style>
+  body { margin: 0; overflow: hidden; background-color: #000; }
+  canvas { display: block; }
+  #fps {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      z-index: 10;
+  }
+  #shop {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 30px;
+      border: 2px solid white;
+      border-radius: 10px;
+      display: none;
+      z-index: 20;
+      width: 350px; /* Increased width for more items */
+      max-height: 80vh;
+      overflow-y: auto;
+      text-align: center;
+      font-family: Arial, sans-serif; /* Consistent font */
+  }
+  #shop h2 {
+      margin-top: 0;
+      color: #4CAF50;
+      margin-bottom: 20px; /* Added space below title */
+  }
+  #shop-items {
+      margin-bottom: 20px;
+      text-align: left;
+  }
+   .shop-item-category {
+       font-size: 1.2em;
+       margin-top: 15px;
+       margin-bottom: 10px;
+       color: #FFD700; /* Gold for category titles */
+       border-bottom: 1px solid grey;
+       padding-bottom: 5px;
+   }
+  .shop-item {
+      background-color: rgba(255, 255, 255, 0.1);
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid grey;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+       display: flex; /* Use flex for layout */
+       justify-content: space-between; /* Space out name and cost */
+       align-items: center; /* Vertically align */
+  }
+  .shop-item:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+  }
+   .shop-item[style*="opacity: 0.5"] {
+        cursor: not-allowed !important;
+        background-color: rgba(255, 255, 255, 0.05);
+   }
+    .shop-item-cost {
+        color: #FFD700; /* Gold color for cost */
+        font-weight: bold;
+    }
+  #shop button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      margin-top: 15px; /* Space above button */
+  }
+  #shop button:hover {
+      background-color: #45a049;
+  }
+   #player-coins {
+       color: #FFD700;
+       font-weight: bold;
+   }
 
-        /* --- UI Container Styles (Keep as before) --- */
-         #uiContainer {
-            position: absolute;
-            top: 10px;
-            left: 5%;
-            right: 5%;
-            width: 90%;
-            display: none; /* Hidden by default */
-            justify-content: space-between;
-            font-size: clamp(10px, 1.5vw, 14px);
-            pointer-events: none;
-            text-shadow: 1px 1px 2px #000;
-            z-index: 5;
-        }
-        #uiContainer.visible { display: flex; }
-        #uiContainer span {
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 5px 10px;
-            border-radius: 5px;
-            white-space: nowrap;
-        }
-         /* Style for temporary power-up effects */
-        #powerupIndicator {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: clamp(10px, 1.2vw, 12px);
-            z-index: 5;
-            display: none; /* Hidden by default */
-            color: #ffdd57; /* Yellowish */
-        }
+   #achievement-notification {
+       position: absolute;
+       bottom: 20px;
+       left: 50%;
+       transform: translateX(-50%);
+       background-color: rgba(0, 0, 0, 0.8); /* Slightly more opaque */
+       color: white;
+       padding: 15px 25px; /* Increased padding */
+       border-radius: 5px;
+       display: none;
+       z-index: 30;
+       font-family: Arial, sans-serif;
+       font-size: 18px;
+   }
 
-
-        /* --- Screen Overlay Styles (Keep as before) --- */
-        .screen-overlay {
-             position: absolute;
-             top: 0; left: 0; width: 100%; height: 100%;
-             background-color: rgba(0, 0, 0, 0.85);
-             display: flex; flex-direction: column;
-             align-items: center; justify-content: center;
-             text-align: center; z-index: 10;
-             padding: 20px; box-sizing: border-box;
-        }
-        #startScreen { background-color: rgba(0, 0, 0, 0.85); }
-        #shopScreen { background-color: rgba(0, 0, 0, 0.9); display: none; }
-        #achievementsScreen { background-color: rgba(0, 0, 0, 0.9); display: none; justify-content: flex-start; overflow-y: auto; z-index: 15; }
-        #messageBox {
-            background-color: rgba(0, 0, 0, 0.9); border: 2px solid #fff;
-            padding: 30px; border-radius: 10px; text-align: center;
-            z-index: 20; display: none; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: auto; height: auto; max-width: 80%;
-        }
-
-        /* --- Start Screen Styles (Keep as before) --- */
-        #startScreen h1 { font-size: clamp(1.8em, 5vw, 2.5em); margin-bottom: 20px; color: #ffcc00; text-shadow: 2px 2px 4px #000; }
-        #startScreen p { margin-bottom: 15px; line-height: 1.5; max-width: 80%; font-size: clamp(0.8em, 2vw, 1em); }
-        .button { font-family: 'Press Start 2P', cursive; background-color: #4CAF50; border: none; color: white; padding: clamp(10px, 2vw, 15px) clamp(20px, 4vw, 32px); text-align: center; text-decoration: none; display: inline-block; font-size: clamp(12px, 2.5vw, 16px); margin: 10px 5px; cursor: pointer; border-radius: 8px; transition: background-color 0.3s ease, transform 0.1s ease; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border-bottom: 4px solid #367c39; }
-        .button:hover { background-color: #45a049; }
-        .button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); border-bottom-width: 2px; }
-        .button.secondary { background-color: #007bff; border-bottom-color: #0056b3; }
-        .button.secondary:hover { background-color: #0069d9; }
-        .difficulty-select, .bonus-select { margin-top: 20px; font-size: clamp(0.8em, 2vw, 1em); }
-        .difficulty-select label, .bonus-select label { margin: 5px 10px; display: inline-block; }
-
-        /* --- Shop Screen Styles (Keep as before, adjust grid if needed) --- */
-        #shopScreen h2 { margin-bottom: 20px; color: #ffcc00; font-size: clamp(1.5em, 4vw, 2em); }
-        #shopScreen p { font-size: clamp(0.8em, 2vw, 1em); margin-bottom: 15px; }
-        #shopItems { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); /* Adjusted min width */ gap: 15px; width: 90%; max-width: 900px; /* Increased max width */ max-height: 65vh; overflow-y: auto; margin-bottom: 20px; padding: 10px; background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; }
-        .shopItem { background-color: #444; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #666; display: flex; flex-direction: column; justify-content: space-between; } /* Flex for button alignment */
-        .shopItem h3 { font-size: clamp(0.9em, 2vw, 1em); margin-bottom: 5px; color: #eee; }
-        .shopItem p { font-size: clamp(0.7em, 1.8vw, 0.8em); margin-bottom: 10px; color: #ccc; min-height: 3.5em; flex-grow: 1; } /* Allow description to grow */
-        .shopItem .cost { font-weight: bold; color: #ffcc00; margin-bottom: 10px; font-size: clamp(0.8em, 1.9vw, 0.9em); }
-        .shopItem button { font-family: 'Press Start 2P', cursive; background-color: #28a745; border: none; color: white; padding: 8px 16px; text-align: center; font-size: clamp(10px, 2vw, 12px); cursor: pointer; border-radius: 5px; transition: background-color 0.3s ease; width: 100%; border-bottom: 3px solid #1c7430; margin-top: auto; } /* Push button to bottom */
-        .shopItem button:hover:not(:disabled) { background-color: #218838; }
-        .shopItem button:disabled { background-color: #6c757d; cursor: not-allowed; border-bottom-color: #494f54; }
-
-        /* --- Message Box Styles (Keep as before) --- */
-        #messageBox h3 { margin-top: 0; margin-bottom: 15px; color: #ffcc00; font-size: clamp(1.2em, 3vw, 1.5em); }
-        #messageBox p { margin-bottom: 20px; font-size: clamp(0.9em, 2vw, 1.1em); }
-
-        /* --- Achievements Styles (Keep as before) --- */
-        #achievementsScreen h2 { margin-bottom: 20px; color: #ffcc00; font-size: clamp(1.5em, 4vw, 2em); }
-        #achievementsList { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; width: 90%; max-width: 900px; }
-        .achievement { background-color: #444; padding: 15px; border-radius: 8px; border: 1px solid #666; opacity: 0.5; transition: opacity 0.3s ease, transform 0.3s ease; }
-        .achievement.unlocked { opacity: 1; border-color: #ffcc00; transform: scale(1.02); }
-        .achievement h3 { font-size: clamp(0.9em, 2vw, 1em); margin-bottom: 5px; color: #eee; }
-        .achievement.unlocked h3 { color: #ffcc00; }
-        .achievement p { font-size: clamp(0.7em, 1.8vw, 0.8em); color: #ccc; }
-        #achievementPopup { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #28a745; color: white; padding: 15px 25px; border-radius: 8px; z-index: 30; display: none; font-size: clamp(12px, 2vw, 14px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: fadeInOut 4s ease-in-out; width: max-content; max-width: 80%; }
-        @keyframes fadeInOut { 0%, 100% { opacity: 0; transform: translate(-50%, 20px); } 10%, 90% { opacity: 1; transform: translate(-50%, 0); } }
-
-    </style>
+</style>
 </head>
 <body>
-    <div id="gameContainer">
-        <canvas id="gameCanvas"></canvas>
+<div id="fps">FPS: 0</div>
+<canvas id="gameCanvas"></canvas>
 
-        <div id="uiContainer">
-            <span id="healthDisplay">Health: 100</span>
-            <span id="waveDisplay">Wave: 1</span>
-            <span id="scoreDisplay">Score: 0</span>
-            <span id="enemyDisplay">Enemies: 0</span>
+<div id="shop">
+    <h2>Shop</h2>
+    <div id="shop-items">
         </div>
-        <div id="powerupIndicator"></div>
+    <p>Coins: <span id="player-coins">0</span></p>
+    <button onclick="closeShop()">Continue Wave</button>
+</div>
+
+<div id="achievement-notification">Achievement Unlocked!</div>
 
 
-        <div id="startScreen" class="screen-overlay">
-            <h1>Wave Defense TD Enhanced</h1>
-            <p>Use WASD or Arrow Keys to Move. Left Click to Shoot.</p>
-            <p>Survive the waves and buy upgrades! Look out for power-ups!</p>
-            <div class="difficulty-select">
-                Difficulty:
-                <label><input type="radio" name="difficulty" value="0.8" checked> Easy</label>
-                <label><input type="radio" name="difficulty" value="1.0"> Medium</label>
-                <label><input type="radio" name="difficulty" value="1.3"> Hard</label>
-            </div>
-            <div class="bonus-select">
-                 Starting Bonus:
-                <label><input type="radio" name="startBonus" value="health" checked> +20 Max Health</label>
-                <label><input type="radio" name="startBonus" value="firerate"> +10% Fire Rate</label>
-                <label><input type="radio" name="startBonus" value="score"> +50 Starting Score</label>
-            </div>
-            <button id="startButton" class="button">Start Game</button>
-            <button id="achievementsButton" class="button secondary">Achievements</button>
-        </div>
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
 
-        <div id="shopScreen" class="screen-overlay">
-            <h2>Upgrade Shop</h2>
-            <p>Wave Cleared! Spend your score (Current: <span id="shopScore">0</span>)</p>
-            <div id="shopItems">
-                </div>
-            <button id="continueButton" class="button">Continue to Next Wave</button>
-        </div>
-
-        <div id="achievementsScreen" class="screen-overlay">
-            <h2>Achievements</h2>
-            <div id="achievementsList">
-                </div>
-            <button id="backToStartButton" class="button">Back</button>
-        </div>
-
-         <div id="messageBox">
-            <h3 id="messageTitle">Game Over!</h3>
-            <p id="messageText">You survived X waves.</p>
-            <button id="messageButton" class="button">Restart</button>
-        </div>
-
-    </div> <div id="achievementPopup">
-        <h3>Achievement Unlocked!</h3>
-        <p id="achievementPopupText"></p>
-    </div>
-
-    <script>
-        // --- DOM Elements ---
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const gameContainer = document.getElementById('gameContainer');
-        const uiContainer = document.getElementById('uiContainer');
-        const healthDisplay = document.getElementById('healthDisplay');
-        const waveDisplay = document.getElementById('waveDisplay');
-        const scoreDisplay = document.getElementById('scoreDisplay');
-        const enemyDisplay = document.getElementById('enemyDisplay');
-        const powerupIndicator = document.getElementById('powerupIndicator'); // Power-up indicator element
-        const startScreen = document.getElementById('startScreen');
-        const startButton = document.getElementById('startButton');
-        const achievementsButton = document.getElementById('achievementsButton');
-        const shopScreen = document.getElementById('shopScreen');
-        const shopItemsContainer = document.getElementById('shopItems');
-        const shopScoreDisplay = document.getElementById('shopScore');
-        const continueButton = document.getElementById('continueButton');
-        const achievementsScreen = document.getElementById('achievementsScreen');
-        const achievementsListContainer = document.getElementById('achievementsList');
-        const backToStartButton = document.getElementById('backToStartButton');
-        const messageBox = document.getElementById('messageBox');
-        const messageTitle = document.getElementById('messageTitle');
-        const messageText = document.getElementById('messageText');
-        const messageButton = document.getElementById('messageButton');
-        const achievementPopup = document.getElementById('achievementPopup');
-        const achievementPopupText = document.getElementById('achievementPopupText');
-
-        // --- Game State ---
-        let gameState = 'start'; // 'start', 'playing', 'shop', 'gameover', 'achievements'
-        let gameLoopId = null;
-        let keys = {};
-        let mouse = { x: 0, y: 0, down: false };
-        let difficultyModifier = 1.0;
-        let startBonus = 'health';
-
-        // --- Game Variables ---
-        let player;
-        let enemies = [];
-        let bullets = [];
-        let enemyBullets = []; // Array for enemy projectiles
-        let powerUps = []; // Array for power-up drops
-        let effects = []; // Array for visual effects like lightning
-        let currentWave = 0;
-        let score = 0;
-        let waveActive = false;
-        let shopRefreshNeeded = true;
-        let lastWaveFeature = null;
-        const POWERUP_DROP_CHANCE = 0.1; // 10% chance for an enemy to drop a power-up
-
-        // --- Player Stats ---
-        const basePlayerStats = {
-            maxHealth: 100, healthRegen: 0.01, speed: 3,
-            fireRate: 10, bulletDamage: 10, bulletSpeed: 7,
-            piercing: 0, homingStrength: 0, pickupRadius: 50,
-            scoreMultiplier: 1.0,
-            // New Stats for Upgrades
-            multiShotLevel: 0, // 0 = single shot
-            chainLightningLevel: 0, // 0 = no chain
-        };
-        let playerStats = { ...basePlayerStats };
-        // Temporary power-up effects tracking
-        let activePowerUps = {
-            rapidFire: { active: false, timer: 0, originalFireRate: 0 },
-            // Add other power-ups like shield here
-        };
-
-        // --- Achievements & Game Stats (Keep as before) ---
-         const achievements = {
-            survivor1: { name: "Beginner Survivor", description: "Survive 5 waves.", unlocked: false, condition: () => currentWave > 5 },
-            survivor2: { name: "Intermediate Survivor", description: "Survive 10 waves.", unlocked: false, condition: () => currentWave > 10 },
-            survivor3: { name: "Expert Survivor", description: "Survive 20 waves.", unlocked: false, condition: () => currentWave > 20 },
-            killer1: { name: "Novice Killer", description: "Defeat 100 enemies.", unlocked: false, condition: (stats) => stats.enemiesKilled >= 100 },
-            killer2: { name: "Adept Killer", description: "Defeat 500 enemies.", unlocked: false, condition: (stats) => stats.enemiesKilled >= 500 },
-            killer3: { name: "Master Killer", description: "Defeat 1000 enemies.", unlocked: false, condition: (stats) => stats.enemiesKilled >= 1000 },
-            upgrader: { name: "Enhancer", description: "Buy 5 upgrades in a single run.", unlocked: false, condition: (stats) => stats.upgradesBought >= 5 },
-            spender: { name: "Big Spender", description: "Spend 5000 score in the shop.", unlocked: false, condition: (stats) => stats.scoreSpent >= 5000 },
-            highScore: { name: "High Scorer", description: "Reach a score of 10000.", unlocked: false, condition: () => score >= 10000 },
-            closeCall: { name: "Close Call", description: "Survive a wave with < 10% health.", unlocked: false, condition: (stats) => stats.closeCallOccurred },
-            chainReaction: { name: "Chain Reaction", description: "Hit 3+ enemies with Chain Lightning.", unlocked: false, condition: (stats) => stats.maxChain >= 3 }, // New achievement
-        };
-        let gameStats = {
-            enemiesKilled: 0, upgradesBought: 0, scoreSpent: 0,
-            closeCallOccurred: false, maxChain: 0, // Track max chain lightning hits
-        };
-        loadAchievements();
-
-        // --- Sound Effects (Keep as before, add new ones if desired) ---
-        let sounds = {};
-        try {
-            sounds = {
-                shoot: new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(),
-                enemyShoot: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.08, sustain: 0, release: 0.1 }, volume: -18 }).toDestination(), // Enemy shoot sound
-                hit: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.05, sustain: 0, release: 0.1 }, volume: -10 }).toDestination(),
-                enemyDeath: new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -12 }).toDestination(),
-                upgrade: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }, volume: -8 }).toDestination(),
-                gameOver: new Tone.Synth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.1, decay: 0.5, sustain: 0, release: 0.5 }, volume: -5 }).toDestination(),
-                waveStart: new Tone.Synth({ oscillator: { type: "pulse", width: 0.6 }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.3 }, volume: -10 }).toDestination(),
-                achievement: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }, volume: -7 }).toDestination(),
-                powerup: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.3 }, volume: -9 }).toDestination(), // Powerup pickup sound
-                lightning: new Tone.Synth({ oscillator: { type: "sawtooth", detune: 15 }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 }, volume: -14 }).toDestination(), // Lightning sound
-            };
-        } catch (error) { console.error("Tone.js initialization failed:", error); sounds = new Proxy({}, { get: () => ({ triggerAttackRelease: () => {} }) }); }
-
-        // --- Utility Functions (Keep as before) ---
-        function degToRad(degrees) { return degrees * (Math.PI / 180); }
-        function distance(x1, y1, x2, y2) { const dx = x2 - x1; const dy = y2 - y1; return Math.sqrt(dx * dx + dy * dy); }
-        function getRandomInt(min, max) { min = Math.ceil(min); max = Math.floor(max); return Math.floor(Math.random() * (max - min + 1)) + min; }
-
-        // --- Game Objects ---
-
-        // ** Player Class Modifications **
-        class Player {
-             constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.radius = canvas.width * 0.015;
-                this.baseSpeed = canvas.width * 0.003;
-                this.color = '#00ff00';
-                this.health = playerStats.maxHealth;
-                this.shootCooldown = 0;
-                this.targetEnemy = null;
-                this.aimAngle = 0;
-            }
-
-            update() {
-                // --- Movement (Keep as before) ---
-                this.radius = canvas.width * 0.015;
-                let currentSpeed = this.baseSpeed * (playerStats.speed / basePlayerStats.speed);
-                let dx = 0; let dy = 0;
-                if (keys['w'] || keys['ArrowUp']) dy -= currentSpeed;
-                if (keys['s'] || keys['ArrowDown']) dy += currentSpeed;
-                if (keys['a'] || keys['ArrowLeft']) dx -= currentSpeed;
-                if (keys['d'] || keys['ArrowRight']) dx += currentSpeed;
-                if (dx !== 0 && dy !== 0) { const magnitude = Math.sqrt(dx*dx + dy*dy); dx = (dx / magnitude) * currentSpeed; dy = (dy / magnitude) * currentSpeed; }
-                this.x += dx; this.y += dy;
-                this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-                this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-
-                // --- Health Regen (Keep as before) ---
-                if (this.health < playerStats.maxHealth) { this.health = Math.min(playerStats.maxHealth, this.health + playerStats.healthRegen); }
-
-                // --- Auto Aim (Keep as before) ---
-                this.findTarget();
-                if (this.targetEnemy) { this.aimAngle = Math.atan2(this.targetEnemy.y - this.y, this.targetEnemy.x - this.x); }
-                else { this.aimAngle = 0; }
-
-                // --- Shooting ---
-                if (this.shootCooldown > 0) { this.shootCooldown--; }
-                // Apply rapid fire power-up effect
-                const currentFireRate = activePowerUps.rapidFire.active ? playerStats.fireRate * 0.5 : playerStats.fireRate; // 50% faster fire rate
-                if (mouse.down && this.shootCooldown <= 0 && enemies.length > 0) {
-                    this.shoot();
-                    this.shootCooldown = currentFireRate; // Use potentially modified fire rate
-                }
-
-                // --- Update Active Power-ups ---
-                this.updatePowerUps();
-            }
-
-            findTarget() { /* Keep as before */
-                let closestDist = Infinity; this.targetEnemy = null;
-                enemies.forEach(enemy => { if (enemy.health <= 0) return; const dist = distance(this.x, this.y, enemy.x, enemy.y); if (dist < closestDist) { closestDist = dist; this.targetEnemy = enemy; } });
-            }
-
-            shoot() {
-                const angleToShoot = this.aimAngle;
-                const bulletRadius = canvas.width * 0.005;
-                const bulletSpeed = canvas.width * 0.007 * (playerStats.bulletSpeed / basePlayerStats.bulletSpeed);
-
-                // Multi-shot Logic
-                const numShots = 1 + playerStats.multiShotLevel; // Base shot + levels
-                const spreadAngle = degToRad(10); // Angle between multi-shots
-                const startAngle = angleToShoot - (spreadAngle * (numShots - 1) / 2);
-
-                for (let i = 0; i < numShots; i++) {
-                    const shotAngle = startAngle + (i * spreadAngle);
-                    const bulletX = this.x + Math.cos(shotAngle) * (this.radius + bulletRadius + 2);
-                    const bulletY = this.y + Math.sin(shotAngle) * (this.radius + bulletRadius + 2);
-
-                    bullets.push(new Bullet(
-                        bulletX, bulletY, shotAngle, bulletSpeed,
-                        playerStats.bulletDamage, playerStats.piercing,
-                        playerStats.homingStrength, this.targetEnemy, // Pass target for homing
-                        playerStats.chainLightningLevel // Pass chain lightning level
-                    ));
-                }
-                sounds.shoot?.triggerAttackRelease("C5", "8n", Tone.now());
-            }
-
-            updatePowerUps() {
-                let indicatorText = "";
-                // Rapid Fire
-                if (activePowerUps.rapidFire.active) {
-                    activePowerUps.rapidFire.timer--;
-                    indicatorText += `Rapid Fire: ${Math.ceil(activePowerUps.rapidFire.timer / 60)}s `;
-                    if (activePowerUps.rapidFire.timer <= 0) {
-                        activePowerUps.rapidFire.active = false;
-                        // No need to restore fire rate here, it's checked in update()
-                        console.log("Rapid Fire ended");
-                    }
-                }
-                // Add checks for other power-ups (e.g., shield) here
-
-                // Update UI indicator
-                if (indicatorText) {
-                    powerupIndicator.textContent = indicatorText.trim();
-                    powerupIndicator.style.display = 'block';
-                } else {
-                    powerupIndicator.style.display = 'none';
-                }
-            }
+  // Game State
+  let gameState = 'start'; // 'start', 'playing', 'shop', 'gameover'
+  let wave = 1;
+  let score = 0;
+  let coins = 0;
+  let enemies = [];
+  let playerProjectiles = [];
+  let enemyProjectiles = [];
+  let powerups = [];
+  let particles = []; // Array to store particles
+  let upgrades = {}; // Store purchased upgrades
+  let achievements = {}; // Store achievement status
+  let highScore = localStorage.getItem('highScore') || 0;
+  let totalEnemiesKilled = 0;
+  let totalPowerupsCollected = 0;
+  let totalUpgradesPurchased = 0;
 
 
-            draw() { /* Keep as before */
-                ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, canvas.width * 0.003); ctx.beginPath(); ctx.moveTo(this.x, this.y);
-                ctx.lineTo( this.x + Math.cos(this.aimAngle) * (this.radius + 5), this.y + Math.sin(this.aimAngle) * (this.radius + 5) ); ctx.stroke();
-            }
+  // Player
+  const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 20,
+    color: 'blue',
+    speed: 5,
+    fireRate: 200, // milliseconds between shots
+    lastShotTime: 0,
+    health: 100,
+    maxHealth: 100,
+    damage: 10,
+    invincible: false,
+    coinMagnet: false,
+    dashCooldown: 500,
+    lastDashTime: 0,
+    isDashing: false,
+    dashDuration: 100,
+    dashSpeedMultiplier: 3
+  };
 
-            takeDamage(amount) { /* Keep as before */
-                this.health -= amount; sounds.hit?.triggerAttackRelease("E4", "16n", Tone.now());
-                if (this.health <= 0) { this.health = 0; gameOver(); }
-                updateUI();
-            }
+  // Powerup effect properties (for effects like Slow Field)
+  const effectAreas = [];
 
-             collectPowerUp(powerUp) {
-                 console.log(`Collected power-up: ${powerUp.type}`);
-                 sounds.powerup?.triggerAttackRelease("A5", "8n", Tone.now());
 
-                 switch(powerUp.type) {
-                     case 'health':
-                         this.health = Math.min(playerStats.maxHealth, this.health + 25); // Heal 25 HP
-                         updateUI();
-                         break;
-                     case 'rapidFire':
-                         if (!activePowerUps.rapidFire.active) {
-                             // Store original only if not already active
-                             activePowerUps.rapidFire.originalFireRate = playerStats.fireRate;
-                         }
-                         activePowerUps.rapidFire.active = true;
-                         activePowerUps.rapidFire.timer = powerUp.duration * 60; // Duration in frames
-                         // Fire rate modification happens in Player.update()
-                         console.log("Rapid Fire activated");
-                         break;
-                     // Add cases for other power-up types here
-                 }
-             }
-        }
+  // FPS Counter
+  let lastFrameTime = performance.now();
+  let frameCount = 0;
+  let fps = 0;
 
-        // ** Base Enemy Class (Can be inherited or used directly) **
-        class Enemy {
-             constructor(x, y, waveData, type = 'basic') {
-                this.x = x;
-                this.y = y;
-                this.type = type;
-                this.isDead = false; // Flag to prevent multiple death triggers
+  // Start Screen Variables
+  let currentStartTip = "";
+  const startTips = [
+      "Tip: Auto-aim targets the closest enemy!",
+      "Tip: Collect coins to buy upgrades!",
+      "Tip: Survive as many waves as possible!",
+      "Tip: Powerups last for 10 seconds!",
+      "Tip: Use WASD or arrow keys to move!",
+      "Tip: Press SPACE to dash and avoid damage!",
+      "Tip: Health bar color indicates health status!", // New tip for health bars
+       "Tip: Enemies sometimes drop helpful powerups!", // Added tip
+       "Tip: Unlock passive abilities in the shop!", // Added tip
+       "Tip: Watch out for enemies that shoot back!" // Added tip
+      ];
 
-                // Base stats - potentially overridden by type/waveData
-                this.baseSpeed = canvas.width * 0.001 * (1 + (currentWave * 0.05));
-                this.radius = canvas.width * 0.012 * (waveData.sizeMultiplier || 1);
-                this.color = waveData.color || '#ff0000';
-                this.maxHealth = (20 + currentWave * 5) * (waveData.healthMultiplier || 1) * difficultyModifier;
-                this.damage = 10 + currentWave;
-                this.scoreValue = (10 + currentWave) * (waveData.scoreMultiplier || 1);
 
-                // Apply wave feature modifiers
-                this.speed = this.baseSpeed * (waveData.speedMultiplier || 1) * difficultyModifier;
-                this.canDodge = waveData.canDodge || false;
-                this.regenerates = waveData.regenerates || false;
+  // --- Start Page Features ---
+  function drawStartPage() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Top Down Defender', canvas.width / 2, canvas.height / 2 - 80);
+    ctx.font = '20px Arial';
+    ctx.fillText('Click to Start Wave ' + wave, canvas.width / 2, canvas.height / 2);
 
-                // Initialize common properties
-                this.health = this.maxHealth;
-                this.dodgeCooldown = 0;
-                this.dodgeDuration = 0;
-                this.dodgeAngle = 0;
-            }
+    // Unique Feature 1: Display the stored Random Tip
+    ctx.font = '16px Arial';
+    ctx.fillText(currentStartTip, canvas.width / 2, canvas.height / 2 + 60);
 
-            update() {
-                 if (!player || this.health <= 0) return; // Stop updating if dead (health check is sufficient here)
+    // Unique Feature 2: Display High Score
+    ctx.font = '24px Arial';
+    ctx.fillText('High Score: ' + highScore, canvas.width / 2, canvas.height / 2 + 120);
 
-                 // --- Movement & Dodging (Keep basic logic) ---
-                 if (this.canDodge && this.dodgeCooldown <= 0 && Math.random() < 0.01) { this.dodgeCooldown = getRandomInt(120, 300); this.dodgeDuration = getRandomInt(20, 40); this.dodgeAngle = Math.random() * Math.PI * 2; }
-                 let targetX = player.x; let targetY = player.y; let moveSpeed = this.speed;
-                 if (this.dodgeDuration > 0) { targetX = this.x + Math.cos(this.dodgeAngle) * 100; targetY = this.y + Math.sin(this.dodgeAngle) * 100; moveSpeed *= 1.5; this.dodgeDuration--; }
-                 else if (this.dodgeCooldown > 0) { this.dodgeCooldown--; }
-                 const angle = Math.atan2(targetY - this.y, targetX - this.x);
-                 this.x += Math.cos(angle) * moveSpeed; this.y += Math.sin(angle) * moveSpeed;
 
-                 // --- Collision with Player (Keep as before) ---
-                 const distToPlayer = distance(this.x, this.y, player.x, player.y);
-                 if (distToPlayer < this.radius + player.radius) { player.takeDamage(this.damage); this.health = 0; } // Set health to 0 on collision
+    // Animated Background Element (More prominent)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    for(let i = 0; i < 20; i++) {
+        ctx.beginPath();
+        ctx.arc(canvas.width * Math.random(), canvas.height * Math.random(), 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+  }
 
-                 // --- Regeneration (Keep as before) ---
-                 if (this.regenerates && this.health < this.maxHealth && this.health > 0) { this.health = Math.min(this.maxHealth, this.health + 0.02 * difficultyModifier); }
-            }
+  // --- Game Over Page ---
+  function drawGameOverPage() {
+       ctx.fillStyle = 'black';
+       ctx.fillRect(0, 0, canvas.width, canvas.height);
+       ctx.fillStyle = 'white';
+       ctx.font = '40px Arial';
+       ctx.textAlign = 'center';
+       ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2 - 80);
+       ctx.font = '24px Arial';
+       ctx.fillText('You Reached Wave: ' + wave, canvas.width / 2, canvas.height / 2 - 20);
+       ctx.fillText('Final Score: ' + score, canvas.width / 2, canvas.height / 2 + 20);
+       ctx.fillText('High Score: ' + highScore, canvas.width / 2, canvas.height / 2 + 60);
+       ctx.font = '20px Arial';
+       ctx.fillText('Click to Restart', canvas.width / 2, canvas.height / 2 + 120);
+  }
 
-             drawHealthBar() {
-                 const healthBarWidth = this.radius * 2;
-                 const healthBarHeight = Math.max(3, canvas.width * 0.004);
-                 const healthBarOffsetY = this.radius + healthBarHeight + 2;
-                 // Use Math.max to prevent negative health percentages visually
-                 const healthPercent = Math.max(0, this.health / this.maxHealth);
-                 ctx.fillStyle = '#555';
-                 ctx.fillRect(this.x - this.radius, this.y - healthBarOffsetY, healthBarWidth, healthBarHeight);
-                 ctx.fillStyle = healthPercent > 0.5 ? '#00cc00' : healthPercent > 0.2 ? '#cccc00' : '#cc0000';
-                 ctx.fillRect(this.x - this.radius, this.y - healthBarOffsetY, healthBarWidth * healthPercent, healthBarHeight);
-             }
 
-            draw() {
-                 // Only draw if health is positive (prevents drawing after removal check)
-                 if (this.health > 0 || !this.isDead) { // Draw if health > 0 OR if isDead hasn't been fully processed yet
-                     this.drawHealthBar();
-                     // Draw basic enemy body
-                     ctx.fillStyle = this.color;
-                     ctx.beginPath();
-                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                     ctx.fill();
-                 }
-            }
+  // --- Enemy Types ---
+  const enemyTypes = [
+    { name: 'Basic', color: 'red', speed: 2, health: 20, size: 15, damage: 5, coinDrop: 1, type: 'basic' },
+    { name: 'Fast', color: 'orange', speed: 4, health: 15, size: 12, damage: 5, coinDrop: 1, type: 'basic' },
+    { name: 'Tank', color: 'purple', speed: 1, health: 50, size: 25, damage: 10, coinDrop: 3, type: 'basic' },
+    { name: 'Shooter', color: 'brown', speed: 1.5, health: 25, size: 18, damage: 7, coinDrop: 2, type: 'shooter', projectileSpeed: 4, fireRate: 1500, lastShotTime: 0 },
+    { name: 'Splitter', color: 'grey', speed: 2.5, health: 30, size: 20, damage: 6, coinDrop: 2, type: 'splitter', splitCount: 2, splitHealthRatio: 0.5, splitSizeRatio: 0.7 },
+    { name: 'Charger', color: 'darkred', speed: 3, health: 20, size: 17, damage: 8, coinDrop: 2, type: 'basic' },
+    { name: 'Pusheen', color: 'pink', speed: 1.8, health: 35, size: 22, damage: 6, coinDrop: 3, type: 'basic' },
+    { name: 'Acidic', color: 'lime', speed: 2, health: 20, size: 16, damage: 6, coinDrop: 2, type: 'basic' },
+    { name: 'Frost', color: 'lightblue', speed: 1.5, health: 30, size: 19, damage: 5, coinDrop: 2, type: 'basic' },
+    { name: 'Electric', color: 'yellow', speed: 2.2, health: 22, size: 15, damage: 7, coinDrop: 3, type: 'basic' },
+     { name: 'Spitter', color: 'olive', speed: 1.7, health: 28, size: 17, damage: 6, coinDrop: 2, type: 'shooter', projectileSpeed: 3, fireRate: 2000, lastShotTime: 0 },
+     { name: 'Defender', color: 'teal', speed: 1.2, health: 60, size: 23, damage: 8, coinDrop: 4, type: 'basic' },
+     { name: 'Hopper', color: 'springgreen', speed: 1, health: 20, size: 16, damage: 5, coinDrop: 2, type: 'basic' },
+     { name: 'Regenerator', color: 'forestgreen', speed: 1.9, health: 40, size: 20, damage: 7, coinDrop: 3, type: 'regenerator', healRate: 0.1 },
+     { name: 'Bomber', color: 'darkorange', speed: 2.1, health: 25, size: 18, damage: 15, coinDrop: 3, type: 'bomber' },
+  ];
 
-            takeDamage(amount) {
-                // Prevent taking damage if already dead or health is already <= 0
-                if (this.isDead || this.health <= 0) return;
+  function createEnemy(typeData, x, y, size, health, speed, damage, coinDrop) {
+      const type = typeData || enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+      const initialSize = size !== undefined ? size : type.size;
+      const initialHealth = health !== undefined ? health : type.health;
+      const initialSpeed = speed !== undefined ? speed : type.speed;
+      const initialDamage = damage !== undefined ? damage : type.damage;
+      const initialCoinDrop = coinDrop !== undefined ? coinDrop : type.coinDrop;
 
-                this.health -= amount;
 
-                // Process death only if health drops to 0 or below *in this call*
-                if (this.health <= 0) {
-                    this.isDead = true; // Mark as dead *immediately*
-                    addScore(this.scoreValue);
-                    gameStats.enemiesKilled++;
-                    sounds.enemyDeath?.triggerAttackRelease("8n", Tone.now());
+      let spawnX, spawnY;
+      if (x !== undefined && y !== undefined) {
+          spawnX = x;
+          spawnY = y;
+      } else {
+         // Spawn off-screen
+          if (Math.random() < 0.5) { // Spawn from top or bottom
+            spawnX = Math.random() * canvas.width;
+            spawnY = Math.random() < 0.5 ? -initialSize : canvas.height + initialSize;
+          } else { // Spawn from left or right
+            spawnX = Math.random() < 0.5 ? -initialSize : canvas.width + initialSize;
+            spawnY = Math.random() * canvas.height;
+          }
+      }
 
-                    // Power-up Drop Logic
-                    if (Math.random() < POWERUP_DROP_CHANCE) {
-                        spawnPowerUp(this.x, this.y);
-                    }
 
-                    // Check achievements immediately after confirming death
-                    checkAchievements();
-                }
+      const newEnemy = {
+        x: spawnX,
+        y: spawnY,
+        radius: initialSize,
+        color: type.color,
+        speed: initialSpeed,
+        health: initialHealth,
+        maxHealth: initialHealth,
+        damage: initialDamage,
+        coinDrop: initialCoinDrop,
+        type: type.type, // Use the type string for behavior
+        hitFlash: 0, // Timer for hit flash effect
+        // Add specific properties for enemy types
+        projectileSpeed: type.projectileSpeed || 0,
+        fireRate: type.fireRate || 0,
+        lastShotTime: type.lastShotTime || 0,
+        splitCount: type.splitCount || 0,
+        splitHealthRatio: type.splitHealthRatio || 0,
+        splitSizeRatio: type.splitSizeRatio || 0,
+        healRate: type.healRate || 0
+      };
+
+      enemies.push(newEnemy);
+  }
+
+
+  let currentWaveFeature = null; // Store the active wave feature
+
+  function spawnWave(waveNumber) {
+    const numEnemies = 10 + waveNumber * 5 + Math.floor(Math.random() * (waveNumber * 2)); // More varied random amount
+
+    // Reset wave feature effects
+    currentWaveFeature = null;
+
+
+    // Determine and apply random wave features
+    applyRandomWaveFeature();
+
+    const enemiesToSpawn = [];
+
+    for (let i = 0; i < numEnemies; i++) {
+        // Select enemy type, potentially influenced by wave features
+        let typeData = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+
+        // Example: If 'More tanky' feature is active, increase chance of spawning Tank enemies
+        if (currentWaveFeature && currentWaveFeature.includes("More tanky")) {
+            if (Math.random() < 0.5) { // 50% chance to favor Tank
+                 const tankType = enemyTypes.find(e => e.name === 'Tank');
+                 if (tankType) typeData = tankType;
             }
         }
-
-        // ** New Enemy Type: Shooter **
-        class ShooterEnemy extends Enemy {
-            constructor(x, y, waveData) {
-                super(x, y, waveData, 'shooter'); // Pass type
-                this.color = '#ff9933'; // Distinct color (Orange)
-                this.shootCooldown = getRandomInt(120, 180); // Frames between shots
-                this.bulletSpeed = canvas.width * 0.004;
-                this.bulletDamage = 5 + Math.floor(currentWave / 2);
-                this.scoreValue *= 1.2; // Worth slightly more
-            }
-
-            update() {
-                // Don't call super.update() if dead, base class handles this check now
-                if (this.health <= 0) return;
-                super.update(); // Call base enemy update for movement, collision, etc.
-                if (!player) return; // Check player exists after super call
-
-                // Shooting Logic
-                this.shootCooldown--;
-                if (this.shootCooldown <= 0) {
-                    const angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
-                    enemyBullets.push(new EnemyBullet(this.x, this.y, angleToPlayer, this.bulletSpeed, this.bulletDamage));
-                    this.shootCooldown = getRandomInt(100, 160) / difficultyModifier; // Reset cooldown (affected by difficulty)
-                    sounds.enemyShoot?.triggerAttackRelease("A3", "16n", Tone.now());
-                }
-            }
-
-            draw() {
-                // Only draw if alive (base class draw now includes this check)
-                super.draw();
-                // Add visual indicator only if drawing occurred
-                 if (this.health > 0 || !this.isDead) {
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius * 0.4, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-        }
-         // ** New Enemy Type: Splitter **
-        class SplitterEnemy extends Enemy {
-            constructor(x, y, waveData, isChild = false) {
-                super(x, y, waveData, 'splitter');
-                this.isChild = isChild;
-                this.color = '#aa44ff'; // Purple
-                if (isChild) {
-                    this.maxHealth *= 0.4; // Children are weaker
-                    this.health = this.maxHealth;
-                    this.radius *= 0.6;
-                    this.speed *= 1.2; // Children are faster
-                    this.scoreValue *= 0.3; // Children worth less
-                    this.damage *= 0.5;
-                } else {
-                     this.scoreValue *= 1.5; // Parent worth more
-                }
-            }
-
-            takeDamage(amount) {
-                // Store health before calling super.takeDamage
-                const healthBefore = this.health;
-                // Call base takeDamage - this handles setting isDead and basic death processing
-                super.takeDamage(amount);
-
-                // Check if health dropped below zero *in this call* and if it's a parent
-                if (healthBefore > 0 && this.health <= 0 && !this.isChild) {
-                    this.split();
-                }
-            }
-
-            split() {
-                 console.log("Splitter splitting!");
-                 const numChildren = 2;
-                 for (let i = 0; i < numChildren; i++) {
-                     const angle = (Math.PI * 2 / numChildren) * i;
-                     const childX = this.x + Math.cos(angle) * this.radius * 1.5;
-                     const childY = this.y + Math.sin(angle) * this.radius * 1.5;
-                     // Need to get current waveData somehow, maybe pass it during spawn?
-                     // For now, create a generic waveData for children
-                     const childWaveData = { healthMultiplier: 1, sizeMultiplier: 1, speedMultiplier: 1 }; // Simplified
-                     enemies.push(new SplitterEnemy(childX, childY, childWaveData, true));
-                 }
-            }
-
-             draw() {
-                 // Only draw if alive (base class draw now includes this check)
-                 super.draw();
-                 // Add visual indicator only if drawing occurred
-                 if (this.health > 0 || !this.isDead) {
-                    ctx.fillStyle = this.isChild ? '#ddd' : '#fff';
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, this.y - this.radius * 0.6);
-                    ctx.lineTo(this.x - this.radius * 0.5, this.y + this.radius * 0.4);
-                    ctx.lineTo(this.x + this.radius * 0.5, this.y + this.radius * 0.4);
-                    ctx.closePath();
-                    ctx.fill();
-                }
-            }
-        }
-
-
-        // ** Bullet Class Modifications **
-        class Bullet {
-             constructor(x, y, angle, speed, damage, piercing, homingStrength, initialTarget, chainLevel = 0) {
-                this.x = x; this.y = y;
-                this.radius = canvas.width * 0.005;
-                this.color = '#ffff00';
-                this.speed = speed; this.damage = damage;
-                this.angle = angle; this.piercing = piercing;
-                this.homingStrength = homingStrength;
-                this.target = (initialTarget && initialTarget.health > 0) ? initialTarget : null;
-                this.piercedEnemies = new Set();
-                this.chainLevel = chainLevel; // How many more times it can chain
-                this.chainSourcePos = { x: x, y: y }; // Track origin for lightning effect
-            }
-
-            update() { /* Keep Homing logic as before */
-                if (this.homingStrength > 0) { if (!this.target || this.target.health <= 0) { this.findNewTarget(); } if (this.target) { const angleToTarget = Math.atan2(this.target.y - this.y, this.target.x - this.x); let angleDiff = angleToTarget - this.angle; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; const maxTurn = Math.PI * 0.05 * this.homingStrength; this.angle += Math.max(-maxTurn, Math.min(maxTurn, angleDiff * this.homingStrength * 0.1)); this.angle = (this.angle + Math.PI * 2) % (Math.PI * 2); } }
-                this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed;
-            }
-
-            findNewTarget() { /* Keep as before */
-                let closestDist = canvas.width * 0.15; let newTarget = null;
-                enemies.forEach(enemy => { if (enemy.health > 0 && !this.piercedEnemies.has(enemy)) { const dist = distance(this.x, this.y, enemy.x, enemy.y); if (dist < closestDist) { closestDist = dist; newTarget = enemy; } } });
-                this.target = newTarget;
-            }
-
-            draw() { /* Keep as before */
-                ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-            }
-
-            // --- Chain Lightning Logic ---
-            tryChainLightning(hitEnemy) {
-                if (this.chainLevel <= 0) return 0; // No more chains left
-
-                const chainRange = canvas.width * 0.15; // How far lightning can jump
-                const chainDamageFactor = 0.7; // Damage reduction per jump
-                let chainedTargets = 0;
-                let currentTarget = hitEnemy;
-                // Ensure we only consider enemies that are currently alive for chaining
-                let availableEnemies = enemies.filter(e => e.health > 0 && e !== hitEnemy && !this.piercedEnemies.has(e));
-                let chainCount = 0; // Track how many jumps happened in this instance
-
-                for (let i = 0; i < this.chainLevel; i++) {
-                    let closestEnemy = null;
-                    let minDist = chainRange;
-
-                    // Find the closest valid enemy to the current target
-                    availableEnemies.forEach(enemy => {
-                        // Double check health > 0 here as well
-                        if (enemy.health <= 0) return;
-                        const dist = distance(currentTarget.x, currentTarget.y, enemy.x, enemy.y);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            closestEnemy = enemy;
-                        }
-                    });
-
-                    if (closestEnemy) {
-                        const lightningDamage = this.damage * Math.pow(chainDamageFactor, i + 1); // Damage reduces per jump
-                        // Call takeDamage on the chained enemy
-                        closestEnemy.takeDamage(lightningDamage);
-                        this.piercedEnemies.add(closestEnemy); // Mark as hit by this bullet's chain
-                        chainedTargets++;
-                        chainCount++;
-
-                        // Add visual effect
-                        effects.push(new LightningEffect(currentTarget.x, currentTarget.y, closestEnemy.x, closestEnemy.y));
-                        sounds.lightning?.triggerAttackRelease("E5", "16n", Tone.now() + i * 0.05); // Stagger sound slightly
-
-                        // Prepare for next jump
-                        currentTarget = closestEnemy;
-                         // Remove the hit enemy from the available pool for the next jump
-                        availableEnemies = availableEnemies.filter(e => e !== closestEnemy);
-                        if (availableEnemies.length === 0) break; // No more valid targets
-                    } else {
-                        break; // No enemy found within range
-                    }
-                }
-                 // Update max chain achievement stat
-                 gameStats.maxChain = Math.max(gameStats.maxChain, chainCount);
-                 // Check achievements only if chain occurred
-                 if(chainCount > 0) checkAchievements();
-
-                 return chainedTargets; // Return how many enemies were chained
-            }
-        }
-
-        // ** New Class: EnemyBullet **
-        class EnemyBullet {
-            constructor(x, y, angle, speed, damage) {
-                this.x = x;
-                this.y = y;
-                this.angle = angle;
-                this.speed = speed;
-                this.damage = damage;
-                this.radius = canvas.width * 0.006; // Slightly larger than player bullets
-                this.color = '#ff6666'; // Light red
-                this.remove = false; // Flag for removal
-            }
-
-            update() {
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-
-                // Check collision with player
-                if (player && distance(this.x, this.y, player.x, player.y) < this.radius + player.radius) {
-                    player.takeDamage(this.damage);
-                    this.remove = true; // Mark for removal
-                }
-
-                // Check off-screen
-                if (this.x < -this.radius || this.x > canvas.width + this.radius || this.y < -this.radius || this.y > canvas.height + this.radius) {
-                    this.remove = true;
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        // ** New Class: PowerUp **
-        class PowerUp {
-            constructor(x, y, type) {
-                this.x = x;
-                this.y = y;
-                this.type = type;
-                this.radius = canvas.width * 0.01;
-                this.lifespan = 600; // Frames before disappearing (10 seconds)
-                this.color = '#ffffff'; // Default white
-                this.symbol = '?';
-                this.duration = 5; // Default duration for timed powerups (seconds)
-                this.remove = false; // Flag for removal
-
-                switch(type) {
-                    case 'health':
-                        this.color = '#00ff00'; // Green
-                        this.symbol = '+';
-                        break;
-                    case 'rapidFire':
-                        this.color = '#ffff00'; // Yellow
-                        this.symbol = '🔥'; // Fire emoji (check browser compatibility) or 'F'
-                        this.duration = 8; // 8 seconds rapid fire
-                        break;
-                    // Add other types here (e.g., shield, score)
-                }
-            }
-
-            update() {
-                this.lifespan--;
-                if (this.lifespan <= 0) {
-                    this.remove = true; // Mark for removal
-                }
-            }
-
-            draw() {
-                // Draw outer circle
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Draw symbol inside
-                ctx.fillStyle = '#000'; // Black symbol
-                ctx.font = `${this.radius * 1.2}px 'Press Start 2P'`; // Scale font size
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(this.symbol, this.x, this.y + this.radius * 0.1); // Slight Y offset for better centering
-            }
-        }
-
-         // ** New Class: LightningEffect **
-        class LightningEffect {
-            constructor(startX, startY, endX, endY) {
-                this.startX = startX;
-                this.startY = startY;
-                this.endX = endX;
-                this.endY = endY;
-                this.lifespan = 15; // Frames (short duration)
-                this.color = `rgba(0, 191, 255, ${0.8 + Math.random() * 0.2})`; // Deep sky blue with opacity variation
-                this.lineWidth = Math.max(1, canvas.width * 0.002 + Math.random() * 2); // Base width + random jitter
-                this.remove = false; // Flag for removal
-            }
-
-            update() {
-                this.lifespan--;
-                if (this.lifespan <= 0) {
-                    this.remove = true;
-                }
-            }
-
-            draw() {
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = this.lineWidth * (this.lifespan / 15); // Fade out width
-                ctx.beginPath();
-                ctx.moveTo(this.startX, this.startY);
-                // Add jaggedness (simple midpoint displacement)
-                const midX = (this.startX + this.endX) / 2 + (Math.random() - 0.5) * 20 * (this.lifespan / 15);
-                const midY = (this.startY + this.endY) / 2 + (Math.random() - 0.5) * 20 * (this.lifespan / 15);
-                ctx.quadraticCurveTo(midX, midY, this.endX, this.endY);
-                // ctx.lineTo(this.endX, this.endY); // Straight line alternative
-                ctx.stroke();
-            }
-        }
-
-
-        // --- Wave Features & Spawning ---
-        const waveFeatures = [ /* Keep as before */
-            { name: "Fast Enemies", apply: (waveData) => ({ ...waveData, speedMultiplier: 1.5, color: '#ff8800' }) },
-            { name: "Tanky Enemies", apply: (waveData) => ({ ...waveData, healthMultiplier: 2.0, sizeMultiplier: 1.2, color: '#cc00cc' }) },
-            { name: "Swarm Wave", apply: (waveData) => ({ ...waveData, countMultiplier: 2.0, healthMultiplier: 0.6, scoreMultiplier: 0.7, color: '#cccccc' }) },
-            { name: "Dodging Enemies", apply: (waveData) => ({ ...waveData, canDodge: true, color: '#00ffff' }) },
-            { name: "Regenerating Enemies", apply: (waveData) => ({ ...waveData, regenerates: true, color: '#00aa00'}) },
-        ];
-        function getRandomWaveFeature(currentWaveNum) { /* Keep as before */
-            const availableFeatures = waveFeatures.filter(f => f.name !== lastWaveFeature); if (availableFeatures.length === 0) availableFeatures.push(...waveFeatures);
-            const maxFeatureIndex = Math.min(waveFeatures.length - 1, Math.floor(currentWaveNum / 3)); if (maxFeatureIndex < 0) return null;
-            const featureChance = 0.3 + currentWaveNum * 0.03; if (Math.random() > featureChance) { lastWaveFeature = null; return null; }
-            const featureIndex = getRandomInt(0, maxFeatureIndex); const selectedFeature = availableFeatures[featureIndex % availableFeatures.length]; lastWaveFeature = selectedFeature.name; console.log(`Wave ${currentWaveNum} Feature: ${selectedFeature.name}`); return selectedFeature;
-        }
-
-        // Store the waveData used for the current wave to pass to Splitter children
-        let currentWaveData = {};
-
-        function startNextWave() {
-            if (gameState !== 'playing') return;
-
-            currentWave++;
-            waveActive = true;
-            enemies = [];
-            bullets = [];
-            enemyBullets = []; // Clear enemy bullets
-            powerUps = []; // Clear remaining powerups
-            effects = []; // Clear visual effects
-            const baseEnemyCount = 5 + currentWave * 2;
-             // Reset and store current wave data
-             currentWaveData = {
-                countMultiplier: 1.0, speedMultiplier: 1.0, healthMultiplier: 1.0,
-                sizeMultiplier: 1.0, scoreMultiplier: 1.0, canDodge: false,
-                regenerates: false, color: '#ff0000', isBoss: false,
-            };
-
-            // Apply random feature
-            const feature = getRandomWaveFeature(currentWave);
-            if (feature) { currentWaveData = feature.apply(currentWaveData); }
-
-            // Boss wave logic
-            if (currentWave > 0 && currentWave % 5 === 0) {
-                currentWaveData = {
-                    countMultiplier: 0.1 * (1 + currentWave * 0.05), healthMultiplier: 8 + currentWave * 0.5,
-                    sizeMultiplier: 2.5, speedMultiplier: 0.7, scoreMultiplier: 5 + currentWave,
-                    color: '#ff4444', canDodge: false, regenerates: true, isBoss: true,
-                };
-                console.log(`Wave ${currentWave} Feature: Boss Wave!`); lastWaveFeature = "Boss Wave";
-            }
-
-            const enemyCount = Math.max(1, Math.floor(baseEnemyCount * currentWaveData.countMultiplier * getRandomInt(8, 12) / 10));
-
-            // --- Enemy Spawning with Types ---
-            for (let i = 0; i < enemyCount; i++) {
-                let enemyType = 'basic';
-                 const typeRoll = Math.random();
-                 if (!currentWaveData.isBoss) { // Don't spawn special types on boss waves
-                     if (currentWave > 3 && typeRoll < 0.25) { enemyType = 'shooter'; }
-                     else if (currentWave > 5 && typeRoll < 0.40) { enemyType = 'splitter'; }
-                 }
-                // Pass the stored currentWaveData to the spawn function
-                spawnEnemy(currentWaveData, enemyType);
-            }
-
-            sounds.waveStart?.triggerAttackRelease("G4", "4n", Tone.now());
-            updateUI();
-        }
-
-        // Modified spawnEnemy to accept waveData directly
-        function spawnEnemy(waveDataToSpawn, type = 'basic') {
-             let x, y; /* Spawning position logic - keep as before */
-             const side = Math.random(); const spawnMargin = canvas.width * 0.05;
-             if (side < 0.25) { x = Math.random() * canvas.width; y = -spawnMargin; }
-             else if (side < 0.5) { x = Math.random() * canvas.width; y = canvas.height + spawnMargin; }
-             else if (side < 0.75) { x = -spawnMargin; y = Math.random() * canvas.height; }
-             else { x = canvas.width + spawnMargin; y = Math.random() * canvas.height; }
-
-             // Instantiate correct enemy type, passing the waveData
-             switch(type) {
-                 case 'shooter':
-                     enemies.push(new ShooterEnemy(x, y, waveDataToSpawn));
-                     break;
-                 case 'splitter':
-                      // Pass the specific waveData used for this wave
-                      enemies.push(new SplitterEnemy(x, y, waveDataToSpawn));
-                      break;
-                 default: // Basic or Boss
-                     enemies.push(new Enemy(x, y, waveDataToSpawn));
-                     break;
-             }
-        }
-
-         function spawnPowerUp(x, y) {
-             const availableTypes = ['health', 'rapidFire']; // Add more types later
-             const type = availableTypes[getRandomInt(0, availableTypes.length - 1)];
-             powerUps.push(new PowerUp(x, y, type));
-             console.log(`Spawning power-up: ${type} at ${Math.round(x)}, ${Math.round(y)}`);
+         // Example: If 'Faster Enemies' feature is active, increase speed for some enemies
+        let initialSpeed = typeData.speed;
+         if (currentWaveFeature && currentWaveFeature.includes("faster")) {
+             initialSpeed *= 1.2; // 20% faster
+         }
+         // Slow down initial waves (New Feature)
+         if (waveNumber <= 3) {
+             initialSpeed *= 0.8; // 20% slower for first 3 waves
          }
 
-        // --- Game Logic & Loop ---
-        function setGameState(newState) { /* Keep as before */
-             console.log(`Changing state from ${gameState} to ${newState}`); gameState = newState;
-             uiContainer.classList.toggle('visible', gameState === 'playing' || gameState === 'shop');
-             powerupIndicator.style.display = (gameState === 'playing' && powerupIndicator.textContent) ? 'block' : 'none'; // Show indicator only if playing and has text
-             startScreen.style.display = (gameState === 'start') ? 'flex' : 'none';
-             shopScreen.style.display = (gameState === 'shop') ? 'flex' : 'none';
-             achievementsScreen.style.display = (gameState === 'achievements') ? 'flex' : 'none';
-             messageBox.style.display = (gameState === 'gameover') ? 'block' : 'none';
+         let initialHealth = typeData.health;
+         if (currentWaveFeature && currentWaveFeature.includes("More tanky")) {
+             initialHealth *= 1.5; // 50% more health
+         }
+
+
+        enemiesToSpawn.push({ typeData: typeData, speed: initialSpeed, health: initialHealth });
+    }
+
+    // Create enemies after feature adjustments
+    enemiesToSpawn.forEach(enemyInfo => {
+        createEnemy(enemyInfo.typeData, undefined, undefined, enemyInfo.typeData.size, enemyInfo.health, enemyInfo.speed, enemyInfo.typeData.damage, enemyInfo.typeData.coinDrop);
+    });
+
+    console.log("Wave", waveNumber, "spawned with", numEnemies, "enemies.");
+  }
+
+  // --- Unique Wave Features ---
+  const waveFeatures = [
+      "Enemies are slightly faster this wave!",
+      "More tanky enemies this wave!",
+      "Enemies drop more coins!",
+      "Limited visibility!",
+      "Enemies heal over time!",
+      "Player speed is reduced this wave!",
+      "Enemies have a chance to dodge!"
+  ];
+
+  function applyRandomWaveFeature() {
+      if (wave > 1 && waveFeatures.length > 0) {
+          currentWaveFeature = waveFeatures[Math.floor(Math.random() * waveFeatures.length)];
+          console.log("Wave Feature:", currentWaveFeature);
+
+          // Apply immediate effects based on the feature
+          if (currentWaveFeature.includes("reduced")) {
+              player.speed *= 0.7;
+              player._originalSpeed = player.speed / 0.7;
+          }
+          // Other immediate effects can go here
+      }
+  }
+
+  function removeWaveFeatureEffects() {
+      if (currentWaveFeature) {
+          // Remove effects that last for the wave
+          if (currentWaveFeature.includes("reduced") && player._originalSpeed !== undefined) {
+              player.speed = player._originalSpeed;
+              delete player._originalSpeed;
+          }
+           // Remove other wave effects here
+      }
+  }
+
+
+  // --- Powerups ---
+  const powerupTypes = [
+    { name: 'Speed Boost', color: 'yellow', duration: 10000, effect: () => player.speed *= 1.5, removeEffect: () => player.speed /= 1.5 },
+    { name: 'Fire Rate Boost', color: 'cyan', duration: 10000, effect: () => player.fireRate = Math.max(20, player.fireRate * 0.7), removeEffect: () => player.fireRate = player.fireRate / 0.7 },
+    { name: 'Damage Boost', color: 'lime', duration: 10000, effect: () => player.damage *= 2, removeEffect: () => player.damage /= 2 },
+    { name: 'Invincibility', color: 'pink', duration: 5000, effect: () => player.invincible = true, removeEffect: () => player.invincible = false },
+    { name: 'Coin Magnet', color: 'gold', duration: 10000, effect: () => player.coinMagnet = true, removeEffect: () => player.coinMagnet = false },
+    { name: 'Area Damage', color: 'red', duration: 100, effect: () => applyAreaDamage(100), removeEffect: () => {} },
+     { name: 'Slow Field', color: 'purple', duration: 8000, effect: () => { effectAreas.push({ type: 'slow', x: player.x, y: player.y, radius: 100, slowFactor: 0.5, endTime: performance.now() + 8000 }); }, removeEffect: () => {} }
+  ];
+
+  // Keep track of active powerups with their end times
+  let activePowerupEffects = [];
+
+  function createPowerup(x, y) {
+      if (Math.random() < 0.2 && powerupTypes.length > 0) {
+          const type = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
+          powerups.push({
+              x: x,
+              y: y,
+              radius: 10,
+              color: type.color,
+              type: type,
+              createdAt: performance.now()
+          });
+      }
+  }
+
+  function applyPowerupEffect(powerupType) {
+      totalPowerupsCollected++;
+
+      const existingEffectIndex = activePowerupEffects.findIndex(effect => effect.type.name === powerupType.name);
+
+      if (existingEffectIndex !== -1) {
+          activePowerupEffects[existingEffectIndex].endTime = performance.now() + powerupType.duration;
+          console.log(`Refreshed powerup duration: ${powerupType.name}`);
+      } else {
+          console.log("Applied powerup:", powerupType.name);
+          if (powerupType.effect) {
+             powerupType.effect();
+          }
+          activePowerupEffects.push({
+              type: powerupType,
+              endTime: performance.now() + powerupType.duration
+          });
+      }
+      checkAchievements();
+  }
+
+  function removeExpiredPowerupEffects() {
+      const now = performance.now();
+      for (let i = activePowerupEffects.length - 1; i >= 0; i--) {
+          const effect = activePowerupEffects[i];
+          if (now >= effect.endTime) {
+              console.log("Removing powerup effect:", effect.type.name);
+              if (effect.type.removeEffect) {
+                 effect.type.removeEffect();
+              }
+              effectAreas.filter(area => area.type === effect.type.name).forEach(area => area.endTime = 0); // Mark for removal
+              activePowerupEffects.splice(i, 1);
+          }
+      }
+       for (let i = effectAreas.length - 1; i >= 0; i--) {
+           if (performance.now() >= effectAreas[i].endTime) {
+               effectAreas.splice(i, 1);
+           }
+       }
+  }
+
+  function applyAreaDamage(damageAmount) {
+      console.log("Applying Area Damage:", damageAmount);
+      unlockAchievement('areaDamageUsed');
+
+      for (let i = enemies.length - 1; i >= 0; i--) {
+          const enemy = enemies[i];
+          enemy.health -= damageAmount;
+           enemy.hitFlash = 10;
+
+          if (enemy.health <= 0) {
+             handleEnemyDefeat(enemy, i);
+          }
+      }
+  }
+
+    // Function to create sparks particles
+    function createSparks(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 5 + 2;
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                color: color,
+                radius: Math.random() * 2 + 1,
+                lifetime: 30, // Number of frames the particle lasts
+                age: 0
+            });
+        }
+    }
+
+
+  // --- Shop & Upgrades (Combined List) ---
+  // Added 'type' property to distinguish between main upgrades and passive items
+  const allShopItems = [
+    // 15 Main Upgrades (Fleshed out)
+    { id: 'speed', name: 'Increase Speed', cost: 50, type: 'upgrade', apply: () => player.speed += 1, description: "+1 Player Movement Speed" },
+    { id: 'fireRate', name: 'Increase Fire Rate', cost: 75, type: 'upgrade', apply: () => player.fireRate = Math.max(20, player.fireRate - 20), description: "-20ms Fire Rate (min 20ms)" },
+    { id: 'damage', name: 'Increase Damage', cost: 60, type: 'upgrade', apply: () => player.damage += 5, description: "+5 Projectile Damage" },
+    { id: 'maxHealth', name: 'Increase Max Health', cost: 100, type: 'upgrade', apply: () => { player.maxHealth += 20; player.health = Math.min(player.maxHealth, player.health + 20); }, description: "+20 Max Health & Heal" },
+    { id: 'heal', name: 'Heal 50 Health', cost: 30, type: 'upgrade', apply: () => player.health = Math.min(player.maxHealth, player.health + 50), description: "Heal 50 Health" },
+    { id: 'coinBonus', name: 'Coin Bonus (Purchase)', cost: 80, type: 'upgrade', apply: () => { if (!upgrades.coinBonus) upgrades.coinBonus = 0; upgrades.coinBonus += 0.1; }, description: "+10% Coin Gain" },
+    { id: 'projectileSpeed', name: 'Increase Projectile Speed', cost: 70, type: 'upgrade', apply: () => { if (!upgrades.projectileSpeed) upgrades.projectileSpeed = 7; upgrades.projectileSpeed += 1; }, description: "+1 Projectile Speed" },
+    { id: 'areaDamageUnlock', name: 'Unlock Area Damage Powerup', cost: 150, type: 'upgrade', apply: () => { if (!upgrades.areaDamageUnlock) { upgrades.areaDamageUnlock = true; console.log("Area Damage powerup unlocked - requires adding to powerupTypes array manually if not already there"); } }, description: "Unlock Area Damage Powerup Drops" }, // Note: Powerup still needs to be in powerupTypes
+    { id: 'fireRateCap', name: 'Further Fire Rate Cap', cost: 120, type: 'upgrade', apply: () => player.fireRate = Math.max(10, player.fireRate - 15), description: "-15ms Fire Rate (min 10ms)" },
+    { id: 'lifeSteal', name: 'Life Steal', cost: 100, type: 'upgrade', apply: () => { if (!upgrades.lifeSteal) upgrades.lifeSteal = 0; upgrades.lifeSteal += 0.02; }, description: "+2% Life Steal on Hit (Placeholder)" }, // Requires implementation in hit logic
+    { id: 'criticalChance', name: 'Critical Hit Chance', cost: 90, type: 'upgrade', apply: () => { if (!upgrades.criticalChance) upgrades.criticalChance = 0; upgrades.criticalChance += 0.05; }, description: "+5% Critical Hit Chance (Placeholder)" }, // Requires implementation in hit logic
+    { id: 'extraLife', name: 'Extra Life', cost: 500, type: 'upgrade', apply: () => { if (!upgrades.extraLife) upgrades.extraLife = 0; upgrades.extraLife += 1; }, description: "Gain 1 Extra Life (Once per game) (Placeholder)" }, // Requires implementation in game over logic
+    { id: 'coinValue', name: 'Increase Coin Value', cost: 110, type: 'upgrade', apply: () => { if (!upgrades.coinValue) upgrades.coinValue = 0; upgrades.coinValue += 0.1; }, description: "+10% Base Coin Value" },
+    { id: 'powerupDuration', name: 'Increase Powerup Duration', cost: 130, type: 'upgrade', apply: () => { if (!upgrades.powerupDuration) upgrades.powerupDuration = 0; upgrades.powerupDuration += 0.1; }, description: "+10% Powerup Duration (Placeholder)" }, // Requires implementation in powerup timer logic
+    { id: 'enemyHealthReduction', name: 'Reduce Next Wave Health', cost: 100, type: 'upgrade', apply: () => { if (!upgrades.enemyHealthReduction) upgrades.enemyHealthReduction = 0; upgrades.enemyHealthReduction += 0.05; }, description: "-5% Next Wave Enemy Health (Max 50%) (Placeholder)" }, // Requires implementation in spawnWave
+
+    // 10 Passive Items (New Additions)
+    { id: 'passiveHealthRegen', name: 'Passive Health Regen', cost: 150, type: 'passive', apply: () => { if (!upgrades.passiveHealthRegen) upgrades.passiveHealthRegen = 0; upgrades.passiveHealthRegen += 0.05; }, description: "+0.05 Health Regen per second (Placeholder)" }, // Requires implementation in game loop
+    { id: 'passiveCoinGain', name: 'Passive Coin Gain', cost: 120, type: 'passive', apply: () => { if (!upgrades.passiveCoinGain) upgrades.passiveCoinGain = 0; upgrades.passiveCoinGain += 0.5; }, description: "+0.5 Coins per second (Placeholder)" }, // Requires implementation in game loop
+    { id: 'enemySpeedSlow', name: 'Enemy Speed Aura', cost: 200, type: 'passive', apply: () => { if (!upgrades.enemySpeedSlow) upgrades.enemySpeedSlow = 0; upgrades.enemySpeedSlow += 0.02; }, description: "Slows nearby enemies (Placeholder)" }, // Requires implementation in enemy update loop
+    { id: 'xpBonus', name: 'Experience Bonus', cost: 90, type: 'passive', apply: () => { if (!upgrades.xpBonus) upgrades.xpBonus = 0; upgrades.xpBonus += 0.1; }, description: "+10% Experience Gain (If XP System Added)" }, // Placeholder for future XP system
+    { id: 'damageResistance', name: 'Damage Resistance', cost: 180, type: 'passive', apply: () => { if (!upgrades.damageResistance) upgrades.damageResistance = 0; upgrades.damageResistance += 0.02; }, description: "-2% Damage Taken (Max 50%) (Placeholder)" }, // Requires implementation in player hit logic
+    { id: 'powerupSpawnChance', name: 'Powerup Chance', cost: 100, type: 'passive', apply: () => { if (!upgrades.powerupSpawnChance) upgrades.powerupSpawnChance = 0; upgrades.powerupSpawnChance += 0.01; }, description: "+1% Powerup Drop Chance (Placeholder)" }, // Requires implementation in createPowerup
+    { id: 'dashCooldownReduction', name: 'Faster Dash Cooldown', cost: 100, type: 'passive', apply: () => { if (!upgrades.dashCooldownReduction) upgrades.dashCooldownReduction = 0; upgrades.dashCooldownReduction += 0.05; }, description: "-5% Dash Cooldown (Max 50%) (Placeholder)" }, // Requires implementation in dash logic
+    { id: 'aoeRadius', name: 'Projectile AOE', cost: 250, type: 'passive', apply: () => { if (!upgrades.aoeRadius) upgrades.aoeRadius = 0; upgrades.aoeRadius += 5; }, description: "Projectiles deal small area damage (Placeholder)" }, // Requires implementation in projectile hit logic
+    { id: 'critDamage', name: 'Critical Damage', cost: 150, type: 'passive', apply: () => { if (!upgrades.critDamage) upgrades.critDamage = 0; upgrades.critDamage += 0.1; }, description: "+10% Critical Hit Damage (Placeholder)" }, // Requires implementation with Critical Chance upgrade
+    { id: 'coinMagnetRadius', name: 'Magnet Range', cost: 70, type: 'passive', apply: () => { if (!upgrades.coinMagnetRadius) upgrades.coinMagnetRadius = 0; upgrades.coinMagnetRadius += 50; }, description: "+50 Coin Magnet Range (Placeholder)" }, // Requires implementation in coin magnet logic
+  ];
+
+
+  function openShop() {
+    gameState = 'shop';
+    document.getElementById('shop').style.display = 'block';
+    document.getElementById('player-coins').innerText = coins;
+    const shopItemsDiv = document.getElementById('shop-items');
+    shopItemsDiv.innerHTML = ''; // Clear previous items
+
+    if (allShopItems.length === 0) {
+        shopItemsDiv.innerHTML = "<p>No items available.</p>";
+        return;
+    }
+
+    // Separate items into categories for display
+    const mainUpgrades = allShopItems.filter(item => item.type === 'upgrade');
+    const passiveItems = allShopItems.filter(item => item.type === 'passive');
+
+    if (mainUpgrades.length > 0) {
+         shopItemsDiv.innerHTML += '<div class="shop-item-category">Upgrades</div>';
+         mainUpgrades.forEach(item => {
+            const itemElement = document.createElement('div');
+            itemElement.classList.add('shop-item');
+            itemElement.innerHTML = `<span>${item.name}</span> <span class="shop-item-cost">${item.cost} coins</span>`;
+            itemElement.title = item.description; // Add description as tooltip
+            if (coins < item.cost || (item.id === 'extraLife' && upgrades.extraLife > 0)) {
+                itemElement.style.opacity = 0.5;
+                itemElement.style.cursor = 'not-allowed';
+            } else {
+               itemElement.onclick = () => purchaseItem(item.id);
+            }
+            shopItemsDiv.appendChild(itemElement);
+         });
+    }
+
+    if (passiveItems.length > 0) {
+        shopItemsDiv.innerHTML += '<div class="shop-item-category">Passive Items</div>';
+         passiveItems.forEach(item => {
+            const itemElement = document.createElement('div');
+            itemElement.classList.add('shop-item');
+            itemElement.innerHTML = `<span>${item.name}</span> <span class="shop-item-cost">${item.cost} coins</span>`;
+            itemElement.title = item.description; // Add description as tooltip
+            if (coins < item.cost) {
+                itemElement.style.opacity = 0.5;
+                itemElement.style.cursor = 'not-allowed';
+            } else {
+               itemElement.onclick = () => purchaseItem(item.id);
+            }
+            shopItemsDiv.appendChild(itemElement);
+         });
+    }
+  }
+
+  function closeShop() {
+    gameState = 'playing';
+    document.getElementById('shop').style.display = 'none';
+    removeWaveFeatureEffects(); // Remove previous wave effects
+    spawnWave(wave);
+  }
+
+  function purchaseItem(itemId) {
+    const item = allShopItems.find(i => i.id === itemId);
+    if (item && coins >= item.cost) {
+      coins -= item.cost;
+      document.getElementById('player-coins').innerText = coins;
+      item.apply();
+      if (!upgrades[itemId]) { // Use 'upgrades' object to track all purchased items
+          upgrades[itemId] = 0;
+      }
+      upgrades[itemId]++;
+      totalUpgradesPurchased++;
+      console.log(`Purchased ${item.type}: ${item.name}`);
+      checkAchievements();
+
+      openShop(); // Simply re-open the shop to refresh
+    } else {
+      console.log("Cannot purchase item: Not enough coins or item not found");
+    }
+  }
+
+
+  // --- Achievements ---
+  const allAchievements = [
+      { id: 'firstKill', name: 'First Blood', description: 'Kill your first enemy.', achieved: false },
+      { id: 'wave5', name: 'Wave Novice', description: 'Reach Wave 5.', achieved: false },
+      { id: 'collect100coins', name: 'Coin Collector', description: 'Collect 100 coins.', achieved: false },
+      { id: 'buyUpgrade', name: 'First Purchase', description: 'Buy your first upgrade.', achieved: false },
+      { id: 'wave10', name: 'Wave Warrior', description: 'Reach Wave 10.', achieved: false },
+      { id: 'kill100enemies', name: 'Enemy Slayer', description: 'Kill 100 enemies.', achieved: false, count: 0 },
+      { id: 'collect5powerups', name: 'Powerup Enthusiast', description: 'Collect 5 powerups.', achieved: false, count: 0 },
+      { id: 'reachMaxHealth', name: 'Peak Health', description: 'Reach maximum health.', achieved: false },
+      { id: 'wave20', name: 'Wave Veteran', description: 'Reach Wave 20.', achieved: false },
+      { id: 'purchase5upgrades', name: 'Upgrade Spender', description: 'Purchase 5 upgrades.', achieved: false, count: 0 },
+       { id: 'dashUsed', name: 'Quick Move', description: 'Use the dash ability.', achieved: false },
+       { id: 'areaDamageUsed', name: 'Crowd Control', description: 'Collect an Area Damage powerup.', achieved: false },
+  ];
+
+  function checkAchievements() {
+      if (totalEnemiesKilled > 0 && !allAchievements.find(a => a.id === 'firstKill').achieved) {
+          unlockAchievement('firstKill');
+      }
+      if (wave >= 5 && !allAchievements.find(a => a.id === 'wave5').achieved) unlockAchievement('wave5');
+      if (wave >= 10 && !allAchievements.find(a => a.id === 'wave10').achieved) unlockAchievement('wave10');
+      if (wave >= 20 && !allAchievements.find(a => a.id === 'wave20').achieved) unlockAchievement('wave20');
+
+       if (coins >= 100 && !allAchievements.find(a => a.id === 'collect100coins').achieved) unlockAchievement('collect100coins');
+
+       if (totalUpgradesPurchased > 0 && !allAchievements.find(a => a.id === 'buyUpgrade').achieved) unlockAchievement('buyUpgrade');
+       if (totalUpgradesPurchased >= 5 && !allAchievements.find(a => a.id === 'purchase5upgrades').achieved) unlockAchievement('purchase5upgrades');
+
+
+       if (totalEnemiesKilled >= 100 && !allAchievements.find(a => a.id === 'kill100enemies').achieved) unlockAchievement('kill100enemies');
+
+       if (totalPowerupsCollected >= 5 && !allAchievements.find(a => a.id === 'collect5powerups').achieved) unlockAchievement('collect5powerups');
+
+        if (player.health >= player.maxHealth && !allAchievements.find(a => a.id === 'reachMaxHealth').achieved) unlockAchievement('reachMaxHealth');
+
+        // Check for 'dashUsed' (Triggered in handlePlayerMovement on dash)
+        // Check for 'areaDamageUsed' (Triggered when Area Damage powerup is collected)
+
+      // Add checks for other achievements as implemented
+  }
+
+  function unlockAchievement(achievementId) {
+      const achievement = allAchievements.find(a => a.id === achievementId);
+      if (achievement && !achievement.achieved) {
+          achievement.achieved = true;
+          achievements[achievementId] = true;
+          console.log("Achievement Unlocked:", achievement.name);
+          displayAchievementNotification(achievement.name);
+      }
+  }
+
+  function displayAchievementNotification(name) {
+      const notificationDiv = document.getElementById('achievement-notification');
+      notificationDiv.innerText = `Achievement Unlocked: ${name}!`;
+      notificationDiv.style.display = 'block';
+      setTimeout(() => {
+          notificationDiv.style.display = 'none';
+      }, 5000);
+  }
+
+  function handleEnemyDefeat(enemy, index) {
+      let coinsDropped = enemy.coinDrop;
+       if (currentWaveFeature && currentWaveFeature.includes("more coins")) {
+           coinsDropped *= 1.5;
+       }
+       coinsDropped *= (1 + (upgrades.coinBonus || 0)) * (1 + (upgrades.coinValue || 0));
+       coins += Math.round(coinsDropped);
+
+      score += 10;
+      totalEnemiesKilled++;
+      createPowerup(enemy.x, enemy.y);
+
+      if (enemy.type === 'splitter') {
+          for (let i = 0; i < enemy.splitCount; i++) {
+              createEnemy(
+                  enemyTypes.find(t => t.name === 'Splitter'),
+                  enemy.x + (Math.random() - 0.5) * 20,
+                  enemy.y + (Math.random() - 0.5) * 20,
+                  enemy.radius * enemy.splitSizeRatio,
+                  enemy.health * enemy.splitHealthRatio,
+                  enemy.speed * 1.2,
+                  enemy.damage
+              );
+          }
+      }
+        if (enemy.type === 'bomber') {
+            console.log("Bomber exploded!");
         }
 
-        function startGame() { /* Keep as before */
-            resizeCanvas(); difficultyModifier = parseFloat(document.querySelector('input[name="difficulty"]:checked').value); startBonus = document.querySelector('input[name="startBonus"]:checked').value;
-            enemies = []; bullets = []; enemyBullets = []; powerUps = []; effects = []; currentWave = 0; score = 0; waveActive = false; shopRefreshNeeded = true;
-            playerStats = { ...basePlayerStats }; gameStats = { enemiesKilled: 0, upgradesBought: 0, scoreSpent: 0, closeCallOccurred: false, maxChain: 0 }; resetUpgradeLevels();
-            if (startBonus === 'health') { playerStats.maxHealth += 20; } else if (startBonus === 'firerate') { playerStats.fireRate *= 0.9; } else if (startBonus === 'score') { score = 50; }
-            player = new Player(canvas.width / 2, canvas.height / 2); player.health = playerStats.maxHealth;
-            setGameState('playing'); startNextWave(); if (!gameLoopId) { gameLoop(); } updateUI();
+
+      enemies.splice(index, 1);
+      checkAchievements();
+       if (score > highScore) {
+           highScore = score;
+           localStorage.setItem('highScore', highScore);
+       }
+  }
+
+  // --- Game Loop ---
+  function gameLoop(currentTime) {
+    requestAnimationFrame(gameLoop);
+
+    // FPS Calculation
+    frameCount++;
+    const elapsed = currentTime - lastFrameTime;
+    if (elapsed >= 1000) {
+        fps = (frameCount / (elapsed / 1000)).toFixed(0);
+        document.getElementById('fps').innerText = 'FPS: ' + fps;
+        frameCount = 0;
+        lastFrameTime = currentTime;
+    }
+
+    // Clear canvas
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw background grid
+    drawBackgroundGrid();
+
+
+    if (gameState === 'start') {
+      drawStartPage();
+      return;
+    }
+
+     if (gameState === 'gameover') {
+         drawGameOverPage();
+         return;
+     }
+
+
+    if (gameState === 'shop') {
+        // Shop is displayed via CSS
+        return;
+    }
+
+    // --- Game State: 'playing' ---
+
+    // Handle Player Movement and Dash
+    handlePlayerMovement(currentTime);
+
+    // Apply passive effects that require continuous update (e.g., regeneration)
+    const now = performance.now();
+    const deltaTime = (currentTime - (gameLoop.lastTime || currentTime)) / 1000; // Time in seconds since last frame
+    gameLoop.lastTime = currentTime; // Store current time for next frame's calculation
+
+    if (upgrades.passiveHealthRegen > 0) {
+        player.health = Math.min(player.maxHealth, player.health + upgrades.passiveHealthRegen * deltaTime);
+    }
+    if (upgrades.passiveCoinGain > 0) {
+         coins += upgrades.passiveCoinGain * deltaTime; // Gain coins passively
+    }
+     // Implement other passive effects here...
+
+
+    // Auto-aim and shooting
+    if (now - player.lastShotTime > player.fireRate && enemies.length > 0) {
+      let closestEnemy = null;
+      let minDist = Infinity;
+      enemies.forEach(enemy => {
+        const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+        if (dist < minDist) {
+          minDist = dist;
+          closestEnemy = enemy;
+        }
+      });
+
+      if (closestEnemy) {
+        const angle = Math.atan2(closestEnemy.y - player.y, closestEnemy.x - player.x);
+        playerProjectiles.push({
+          x: player.x,
+          y: player.y,
+          radius: 5,
+          color: 'white',
+          speed: (upgrades.projectileSpeed || 7),
+          angle: angle,
+          damage: player.damage
+        });
+        player.lastShotTime = now;
+      }
+    }
+
+    // Update enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+
+         // Apply slow effect if in a slow field or from passive item
+        let currentEnemySpeed = enemy.speed;
+        effectAreas.forEach(area => {
+            if (area.type === 'slow') {
+                const distToArea = Math.hypot(enemy.x - area.x, enemy.y - area.y);
+                if (distToArea < area.radius + enemy.radius) {
+                    currentEnemySpeed *= area.slowFactor;
+                }
+            }
+        });
+         if (upgrades.enemySpeedSlow > 0) { // Apply passive slow aura
+             const distToPlayerForPassiveSlow = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+             const passiveSlowRadius = 150 + (upgrades.enemySpeedSlow * 50); // Example scaling radius
+             if (distToPlayerForPassiveSlow < passiveSlowRadius + enemy.radius) {
+                 currentEnemySpeed *= (1 - upgrades.enemySpeedSlow * 0.5); // Example scaling slow factor
+             }
+         }
+
+
+        const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        enemy.x += Math.cos(angleToPlayer) * currentEnemySpeed;
+        enemy.y += Math.sin(angleToPlayer) * currentEnemySpeed;
+
+        // Handle Shooter enemy firing
+        if (enemy.type === 'shooter' && now - enemy.lastShotTime > enemy.fireRate) {
+             const angleToPlayerForShot = Math.atan2(player.y - enemy.y, player.x - player.x); // Corrected: use player.x
+             enemyProjectiles.push({
+                 x: enemy.x,
+                 y: enemy.y,
+                 radius: 7,
+                 color: enemy.color,
+                 speed: enemy.projectileSpeed,
+                 angle: angleToPlayerForShot,
+                 damage: enemy.damage
+             });
+             enemy.lastShotTime = now;
         }
 
-        function updateGame() {
-            if (gameState !== 'playing') return;
-
-            player?.update();
-
-            // --- Update Player Bullets & Check Collisions ---
-            for (let i = bullets.length - 1; i >= 0; i--) {
-                const bullet = bullets[i];
-                bullet.update();
-                let bulletRemoved = false;
-
-                for (let j = enemies.length - 1; j >= 0; j--) {
-                    const enemy = enemies[j];
-                    // Skip collision check if enemy is already dead
-                    if (enemy.health <= 0 || enemy.isDead) continue;
-
-                    const dist = distance(enemy.x, enemy.y, bullet.x, bullet.y);
-
-                    if (dist < enemy.radius + bullet.radius && !bullet.piercedEnemies.has(enemy)) {
-                        const damageDealt = bullet.damage;
-                        // Call takeDamage - it now handles the isDead flag internally
-                        enemy.takeDamage(damageDealt);
-                        bullet.piercedEnemies.add(enemy);
-
-                        // Chain Lightning Trigger (only if enemy health dropped below zero *after* taking damage)
-                        if (enemy.health <= 0) {
-                             const chainedHits = bullet.tryChainLightning(enemy);
-                             bullet.chainLevel -= chainedHits;
-                        }
+         // Handle Regenerator enemy healing
+         if (enemy.type === 'regenerator' && currentWaveFeature && currentWaveFeature.includes("Enemies heal")) {
+             enemy.health = Math.min(enemy.maxHealth, enemy.health + enemy.healRate * (elapsed / 1000));
+         }
 
 
-                        bullet.piercing--;
-                        if (bullet.piercing < 0) {
-                            bullets.splice(i, 1);
-                            bulletRemoved = true;
-                            break;
-                        }
-                    }
+        // Collision with player - Only take damage if not invincible and not dashing
+        if (!player.invincible && !player.isDashing) {
+            const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+            if (distToPlayer - player.radius - enemy.radius < 1) {
+               let damageTaken = enemy.damage;
+                if (upgrades.damageResistance > 0) { // Apply damage resistance
+                    damageTaken *= (1 - upgrades.damageResistance * 0.5); // Example scaling resistance
                 }
-                // Remove bullets off-screen
-                if (!bulletRemoved && (bullet.x < -bullet.radius || bullet.x > canvas.width + bullet.radius || bullet.y < -bullet.radius || bullet.y > canvas.height + bullet.radius)) {
-                    bullets.splice(i, 1);
-                }
+               player.health -= damageTaken;
+               console.log("Player Health:", player.health);
+               if (player.health <= 0) {
+                   console.log("Game Over!");
+                   gameState = 'gameover';
+                   return;
+               }
             }
+        }
+         // Reduce hit flash timer
+         if (enemy.hitFlash > 0) {
+             enemy.hitFlash--;
+         }
+    }
 
-            // --- Update Enemy Bullets ---
-            for (let i = enemyBullets.length - 1; i >= 0; i--) {
-                 const eb = enemyBullets[i];
-                 eb.update();
-                 if (eb.remove) {
-                     enemyBullets.splice(i, 1);
-                 }
+
+     // Update powerups (visual representation on map)
+     for (let i = powerups.length - 1; i >= 0; i--) {
+         const powerup = powerups[i];
+
+         // Coin Magnet effect
+         if (player.coinMagnet || upgrades.coinMagnetRadius > 0) { // Apply if coin magnet powerup or passive upgrade is active
+              const magnetRadius = 100 + (upgrades.coinMagnetRadius || 0); // Base magnet radius + passive upgrade
+              const distToPlayerForMagnet = Math.hypot(player.x - powerup.x, player.y - powerup.y);
+              if (distToPlayerForMagnet < magnetRadius) {
+                   const angleToPlayer = Math.atan2(player.y - powerup.y, player.x - powerup.x);
+                   powerup.x += Math.cos(angleToPlayer) * 8; // Increased magnet speed
+                   powerup.y += Math.sin(angleToPlayer) * 8;
+              }
+         }
+
+         // Check for collision with player
+         const distToPlayer = Math.hypot(player.x - powerup.x, player.y - powerup.y);
+         if (distToPlayer - player.radius - powerup.radius < 1) {
+             applyPowerupEffect(powerup.type);
+              if (powerup.type.name === 'Area Damage') {
+                 unlockAchievement('areaDamageUsed');
+             }
+             powerups.splice(i, 1);
+         }
+     }
+
+     // Remove expired powerup effects and their areas
+     removeExpiredPowerupEffects();
+
+
+    // Update player projectiles
+    for (let i = playerProjectiles.length - 1; i >= 0; i--) {
+      const projectile = playerProjectiles[i];
+      projectile.x += Math.cos(projectile.angle) * projectile.speed;
+      projectile.y += Math.sin(projectile.angle) * projectile.speed;
+
+      // Remove projectiles outside canvas
+      if (projectile.x < 0 || projectile.x > canvas.width || projectile.y < 0 || projectile.y > canvas.height) {
+        playerProjectiles.splice(i, 1);
+        continue;
+      }
+
+      // Collision with enemies
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const enemy = enemies[j];
+        const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
+
+        let dodged = false;
+        if (currentWaveFeature && currentWaveFeature.includes("dodge") && Math.random() < 0.02) {
+             console.log("Enemy dodged!");
+             dodged = true;
+             enemy.x += (Math.random() - 0.5) * 30;
+             enemy.y += (Math.random() - 0.5) * 30;
+             enemy.x = Math.max(enemy.radius, Math.min(canvas.width - enemy.radius, enemy.x));
+             enemy.y = Math.max(enemy.radius, Math.min(canvas.height - enemy.radius, enemy.y));
+        }
+
+
+        if (dist - projectile.radius - enemy.radius < 1 && !dodged) {
+          // Collision
+          let damageDealt = projectile.damage;
+           // Apply critical hit chance and damage (Placeholder logic)
+           if (upgrades.criticalChance > 0 && Math.random() < upgrades.criticalChance) {
+               damageDealt *= (2 + (upgrades.critDamage || 0)); // Base crit damage 2x + passive upgrade bonus
+               console.log("Critical Hit!");
+                // Add visual critical hit indicator (Placeholder)
+           }
+            // Apply life steal (Placeholder logic)
+            if (upgrades.lifeSteal > 0) {
+                player.health = Math.min(player.maxHealth, player.health + damageDealt * upgrades.lifeSteal);
             }
-
-            // --- Update Enemies & Remove Dead Ones ---
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                const enemy = enemies[i];
-                 // Simplified removal check: Only check health.
-                 // The isDead flag in takeDamage prevents duplicate death processing.
-                 if (enemy.health <= 0) {
-                     // Ensure split logic runs if applicable (it's called within takeDamage now)
-                     enemies.splice(i, 1);
-                 } else {
-                     enemy.update(); // Only update living enemies
-                 }
-            }
-
-             // --- Update PowerUps & Check Collection ---
-             for (let i = powerUps.length - 1; i >= 0; i--) {
-                 const powerUp = powerUps[i];
-                 powerUp.update();
-                 if (powerUp.remove) {
-                     powerUps.splice(i, 1);
-                 } else if (player && distance(player.x, player.y, powerUp.x, powerUp.y) < player.radius + powerUp.radius + playerStats.pickupRadius) {
-                     player.collectPowerUp(powerUp);
-                     powerUps.splice(i, 1);
-                 }
+             // Apply projectile AOE (Placeholder logic)
+             if (upgrades.aoeRadius > 0) {
+                 console.log("Applying Projectile AOE");
+                 // Implement damage to nearby enemies here in a radius
              }
 
-             // --- Update Effects ---
-             for (let i = effects.length - 1; i >= 0; i--) {
-                 const effect = effects[i];
-                 effect.update();
-                 if (effect.remove) {
-                     effects.splice(i, 1);
-                 }
+
+          enemy.health -= damageDealt;
+          playerProjectiles.splice(i, 1);
+          enemy.hitFlash = 10;
+           createSparks(projectile.x, projectile.y, projectile.color, 10); // Create sparks on hit
+
+
+          if (enemy.health <= 0) {
+             handleEnemyDefeat(enemy, j);
+          }
+          break;
+        }
+      }
+    }
+
+    // Update enemy projectiles
+     for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+         const projectile = enemyProjectiles[i];
+         projectile.x += Math.cos(projectile.angle) * projectile.speed;
+         projectile.y += Math.sin(projectile.angle) * projectile.speed;
+
+         if (projectile.x < 0 || projectile.x > canvas.width || projectile.y < 0 || projectile.y > canvas.height) {
+             enemyProjectiles.splice(i, 1);
+             continue;
+         }
+
+         const distToPlayer = Math.hypot(projectile.x - player.x, projectile.y - player.y);
+         if (distToPlayer - projectile.radius - player.radius < 1 && !player.invincible && !player.isDashing) {
+             let damageTaken = projectile.damage;
+              if (upgrades.damageResistance > 0) {
+                 damageTaken *= (1 - upgrades.damageResistance * 0.5);
              }
+             player.health -= damageTaken;
+             console.log("Player Health:", player.health);
+             enemyProjectiles.splice(i, 1);
+              if (player.health <= 0) {
+                   console.log("Game Over!");
+                   gameState = 'gameover';
+                   return;
+               }
+              createSparks(projectile.x, projectile.y, projectile.color, 10); // Create sparks on hit
+
+             break;
+         }
+     }
+
+     // Update particles
+     for (let i = particles.length - 1; i >= 0; i--) {
+         const particle = particles[i];
+         particle.x += particle.vx;
+         particle.y += particle.vy;
+         particle.age++;
+         if (particle.age >= particle.lifetime) {
+             particles.splice(i, 1);
+         }
+     }
 
 
-            // --- Check Wave End ---
-            if (waveActive && enemies.length === 0) {
-                waveActive = false; console.log(`Wave ${currentWave} cleared!`);
-                if (player && player.health / playerStats.maxHealth < 0.10) { gameStats.closeCallOccurred = true; }
-                // Ensure all effects are cleared before shop
-                effects = [];
-                enterShop();
+    // Draw everything
+    drawEffectAreas();
+    drawPlayer();
+    drawEnemies();
+    drawPlayerProjectiles();
+    drawEnemyProjectiles();
+    drawPowerups();
+    drawParticles(); // Draw particles
+    drawUI();
+
+    // Draw limited visibility overlay
+    if (currentWaveFeature && currentWaveFeature.includes("Limited visibility")) {
+        drawLimitedVisibilityOverlay();
+    }
+
+
+    // Check for wave end
+    if (enemies.length === 0 && gameState === 'playing') {
+        wave++;
+        openShop();
+    }
+  }
+
+  // --- Drawing Functions ---
+
+  function drawBackgroundGrid() {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      const gridSize = 40;
+
+      ctx.beginPath();
+      for (let x = 0; x < canvas.width; x += gridSize) {
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+      }
+      ctx.stroke();
+  }
+
+
+  function drawPlayer() {
+    if (player.isDashing) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw health bar (Improved)
+    const healthBarWidth = player.radius * 2.5; // Slightly wider
+    const healthBarHeight = 8; // Slightly taller
+    const healthBarX = player.x - healthBarWidth / 2; // Center health bar
+    const healthBarY = player.y + player.radius + 10;
+
+    // Draw health bar background
+    ctx.fillStyle = 'grey';
+    ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+
+    // Determine health bar color based on percentage
+    const healthPercentage = player.health / player.maxHealth;
+    if (healthPercentage > 0.6) {
+        ctx.fillStyle = 'green';
+    } else if (healthPercentage > 0.3) {
+        ctx.fillStyle = 'yellow';
+    } else {
+        ctx.fillStyle = 'red';
+    }
+
+    const currentHealthWidth = healthPercentage * healthBarWidth;
+    ctx.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
+
+    // Draw health bar border
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+
+
+     // Draw invincibility indicator
+     if (player.invincible) {
+         ctx.strokeStyle = 'yellow';
+         ctx.lineWidth = 3;
+         ctx.beginPath();
+         ctx.arc(player.x, player.y, player.radius + 5, 0, Math.PI * 2);
+         ctx.stroke();
+         ctx.lineWidth = 1;
+     }
+  }
+
+  function drawEnemies() {
+    enemies.forEach(enemy => {
+      if (enemy.hitFlash > 0) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+          ctx.beginPath();
+          ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+          ctx.fill();
+      } else {
+         ctx.fillStyle = enemy.color;
+         ctx.beginPath();
+         ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+         ctx.fill();
+      }
+
+       // Draw enemy health bar (Improved)
+        const healthBarWidth = enemy.radius * 2.5;
+        const healthBarHeight = 4;
+        const healthBarX = enemy.x - healthBarWidth / 2; // Center health bar
+        const healthBarY = enemy.y - enemy.radius - 12;
+
+        // Draw health bar background
+        ctx.fillStyle = 'grey';
+        ctx.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+
+        // Determine health bar color based on percentage
+        const healthPercentage = enemy.health / enemy.maxHealth;
+        if (healthPercentage > 0.6) {
+            ctx.fillStyle = 'lime';
+        } else if (healthPercentage > 0.3) {
+            ctx.fillStyle = 'yellow';
+        } else {
+            ctx.fillStyle = 'red';
+        }
+
+        const currentHealthWidth = healthPercentage * healthBarWidth;
+        ctx.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
+
+        // Draw health bar border
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
+    });
+  }
+
+  function drawPlayerProjectiles() {
+    playerProjectiles.forEach(projectile => {
+      ctx.fillStyle = projectile.color;
+      ctx.beginPath();
+      ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function drawEnemyProjectiles() {
+      enemyProjectiles.forEach(projectile => {
+          ctx.fillStyle = projectile.color;
+          ctx.beginPath();
+          ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+          ctx.fill();
+      });
+  }
+
+
+   function drawPowerups() {
+      powerups.forEach(powerup => {
+          ctx.fillStyle = powerup.color;
+          ctx.beginPath();
+          ctx.arc(powerup.x, powerup.y, powerup.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'white';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(powerup.x, powerup.y, powerup.radius, 0, Math.PI * 2);
+          ctx.stroke();
+      });
+   }
+
+   function drawParticles() {
+       particles.forEach(particle => {
+           ctx.fillStyle = particle.color;
+           ctx.beginPath();
+           ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+           ctx.fill();
+       });
+   }
+
+
+  function drawEffectAreas() {
+      effectAreas.forEach(area => {
+          if (area.type === 'slow') {
+              ctx.fillStyle = 'rgba(128, 0, 128, 0.3)';
+              ctx.beginPath();
+              ctx.arc(area.x, area.y, area.radius, 0, Math.PI * 2);
+              ctx.fill();
+          }
+      });
+  }
+
+
+  function drawUI() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('Wave: ' + wave, 10, 30);
+    ctx.fillText('Score: ' + Math.floor(score), 10, 60); // Display score as integer
+    ctx.fillText('Coins: ' + Math.floor(coins), 10, 90); // Display coins as integer
+
+     // Player Health Text
+     ctx.textAlign = 'center';
+     ctx.fillText('Health: ' + Math.max(0, Math.ceil(player.health)) + '/' + player.maxHealth, player.x, player.y + player.radius + 25);
+
+     // Display active powerup effects (simple text)
+     if (activePowerupEffects.length > 0) {
+         ctx.textAlign = 'right';
+         let uiOffset = 0;
+         activePowerupEffects.forEach(effect => {
+             const timeLeft = ((effect.endTime - performance.now()) / 1000).toFixed(1);
+             ctx.fillStyle = effect.type.color || 'white';
+             ctx.fillText(`${effect.type.name}: ${timeLeft}s`, canvas.width - 10, 30 + uiOffset);
+             uiOffset += 30;
+         });
+     }
+
+     // Display Dash Cooldown (Simple text)
+     const now = performance.now();
+     const dashTimeLeft = Math.max(0, player.lastDashTime + player.dashCooldown - now);
+     if (dashTimeLeft > 0) {
+         ctx.fillStyle = 'grey';
+         ctx.textAlign = 'right';
+         ctx.fillText(`Dash CD: ${(dashTimeLeft / 1000).toFixed(1)}s`, canvas.width - 10, 30 + (activePowerupEffects.length * 30) + 30);
+     }
+
+  }
+
+  function drawLimitedVisibilityOverlay() {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.radius + 150, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+  }
+
+
+  // --- Input Handling ---
+  canvas.addEventListener('click', (event) => {
+    if (gameState === 'start') {
+      gameState = 'playing';
+      resetGame();
+      spawnWave(wave);
+    } else if (gameState === 'gameover') {
+        resetGame();
+        gameState = 'start';
+    }
+  });
+
+  const keys = {};
+  window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+      if (e.key === ' ' && gameState === 'playing') {
+          const now = performance.now();
+          let currentDashCooldown = player.dashCooldown;
+           if (upgrades.dashCooldownReduction > 0) { // Apply passive cooldown reduction
+               currentDashCooldown *= (1 - upgrades.dashCooldownReduction * 0.5);
+           }
+          if (now - player.lastDashTime >= currentDashCooldown) {
+              player.isDashing = true;
+              player.lastDashTime = now;
+              setTimeout(() => {
+                  player.isDashing = false;
+              }, player.dashDuration);
+              unlockAchievement('dashUsed');
+          }
+      }
+  });
+   window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+  });
+
+   function handlePlayerMovement(currentTime) {
+       if (gameState !== 'playing') return;
+
+       let dx = 0;
+       let dy = 0;
+
+       if (keys['w'] || keys['ArrowUp']) dy -= 1;
+       if (keys['s'] || keys['ArrowDown']) dy += 1;
+       if (keys['a'] || keys['ArrowLeft']) dx -= 1;
+       if (keys['d'] || keys['ArrowRight']) dx += 1;
+
+       if (dx !== 0 && dy !== 0) {
+           const magnitude = Math.sqrt(dx * dx + dy * dy);
+           dx /= magnitude;
+           dy /= magnitude;
+       }
+
+       let currentSpeed = player.speed;
+        if (player.isDashing) {
+            currentSpeed *= player.dashSpeedMultiplier;
+        }
+        if (currentWaveFeature && currentWaveFeature.includes("reduced") && !player.isDashing) {
+             currentSpeed = player._originalSpeed * 0.7;
+         }
+
+
+       player.x += dx * currentSpeed;
+       player.y += dy * currentSpeed;
+
+       player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+       player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+        effectAreas.forEach(area => {
+            if (area.type === 'slow') {
+                area.x = player.x;
+                area.y = player.y;
             }
-        }
-
-        function drawGame() { /* Keep as before */
-            if (!ctx) { console.error("Canvas context is not available."); return; }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (gameState === 'playing' || gameState === 'shop') {
-                 powerUps.forEach(p => p.draw());
-                 bullets.forEach(b => b.draw());
-                 enemyBullets.forEach(eb => eb.draw());
-                 enemies.forEach(e => e.draw()); // Enemy draw now checks health internally
-                 player?.draw();
-                 effects.forEach(ef => ef.draw());
-            }
-        }
-
-        function gameLoop() { /* Keep as before */
-            gameLoopId = requestAnimationFrame(gameLoop);
-            if (gameState === 'playing') { updateGame(); }
-            if (canvas.width > 0 && canvas.height > 0) { drawGame(); }
-            updateUI();
-        }
-
-        function updateUI() { /* Keep as before */
-            if (!player) return;
-            healthDisplay.textContent = `Health: ${Math.ceil(player.health)} / ${Math.ceil(playerStats.maxHealth)}`;
-            waveDisplay.textContent = `Wave: ${currentWave}`;
-            scoreDisplay.textContent = `Score: ${score}`;
-            // Filter enemies being displayed count to only living ones, just in case removal lags visually
-            const livingEnemies = enemies.filter(e => e.health > 0).length;
-            enemyDisplay.textContent = `Enemies: ${livingEnemies}`;
-            const healthPercent = player.health / playerStats.maxHealth;
-            let healthColor = '#ff0000'; if (healthPercent > 0.6) healthColor = '#00ff00'; else if (healthPercent > 0.3) healthColor = '#ffff00';
-            healthDisplay.style.color = healthColor;
-        }
-
-        function addScore(amount) { /* Keep as before */
-             if (amount > 0) { score += Math.floor(amount * playerStats.scoreMultiplier); }
-        }
-
-        // --- Shop Logic (definitions kept as before) ---
-        const shopUpgradeDefs = [
-            { id: "maxHealth", name: "Max Health", description: "+20 Max Health", cost: 100, costIncrease: 1.5, maxLevel: 10, level: 0, apply: () => { playerStats.maxHealth += 20; player.health += 20; } },
-            { id: "healthRegen", name: "Health Regen", description: "+50% Regen Rate", cost: 150, costIncrease: 1.8, maxLevel: 5, level: 0, apply: () => { playerStats.healthRegen *= 1.5; } },
-            { id: "speed", name: "Move Speed", description: "+10% Speed", cost: 120, costIncrease: 1.6, maxLevel: 8, level: 0, apply: () => { playerStats.speed *= 1.1; } },
-            { id: "fireRate", name: "Fire Rate", description: "-10% Shoot Cooldown", cost: 200, costIncrease: 1.7, maxLevel: 10, level: 0, apply: () => { playerStats.fireRate = Math.max(1, playerStats.fireRate * 0.9); } },
-            { id: "bulletDamage", name: "Bullet Damage", description: "+25% Damage", cost: 180, costIncrease: 1.6, maxLevel: 10, level: 0, apply: () => { playerStats.bulletDamage *= 1.25; } },
-            { id: "bulletSpeed", name: "Bullet Speed", description: "+15% Bullet Speed", cost: 80, costIncrease: 1.4, maxLevel: 7, level: 0, apply: () => { playerStats.bulletSpeed *= 1.15; } },
-            { id: "piercing", name: "Piercing", description: "+1 Pierce Count", cost: 300, costIncrease: 2.0, maxLevel: 5, level: 0, apply: () => { playerStats.piercing++; } },
-            { id: "homing", name: "Homing", description: "+ Homing Strength", cost: 400, costIncrease: 2.2, maxLevel: 3, level: 0, apply: () => { playerStats.homingStrength += 0.1; } },
-            { id: "multiShot", name: "Multi-Shot", description: "+1 Bullet per Shot", cost: 500, costIncrease: 2.5, maxLevel: 4, level: 0, apply: () => { playerStats.multiShotLevel++; } },
-            { id: "chainLightning", name: "Chain Lightning", description: "+1 Chain Jump", cost: 600, costIncrease: 2.8, maxLevel: 4, level: 0, apply: () => { playerStats.chainLightningLevel++; } },
-            { id: "scoreMultiplier", name: "Score Gain", description: "+10% Score Multiplier", cost: 500, costIncrease: 2.5, maxLevel: 4, level: 0, apply: () => { playerStats.scoreMultiplier += 0.1; } },
-            { id: "pickupRadius", name: "Pickup Radius", description: "+25% Pickup Radius", cost: 50, costIncrease: 1.3, maxLevel: 5, level: 0, apply: () => { playerStats.pickupRadius *= 1.25; } },
-        ];
-        function resetUpgradeLevels() { /* Keep as before */ shopUpgradeDefs.forEach(def => { def.level = 0; }); }
-        function calculateUpgradeCost(upgrade) { /* Keep as before */ const level = Math.max(0, Math.min(upgrade.level, upgrade.maxLevel -1)); return Math.floor(upgrade.cost * Math.pow(upgrade.costIncrease, level)); }
-        function populateShop() { /* Keep as before */
-            shopItemsContainer.innerHTML = ''; shopScoreDisplay.textContent = score;
-            shopUpgradeDefs.forEach(upgrade => {
-                const itemDiv = document.createElement('div'); itemDiv.classList.add('shopItem');
-                const nameH3 = document.createElement('h3'); const levelText = upgrade.level >= upgrade.maxLevel ? " (MAX)" : ` (${upgrade.level}/${upgrade.maxLevel})`; nameH3.textContent = `${upgrade.name}${levelText}`;
-                const descP = document.createElement('p'); descP.textContent = upgrade.description;
-                const costP = document.createElement('p'); costP.classList.add('cost'); const currentCost = calculateUpgradeCost(upgrade);
-                const buyButton = document.createElement('button'); buyButton.onclick = () => buyUpgrade(upgrade.id);
-                 if (upgrade.level >= upgrade.maxLevel) { costP.textContent = "Max Level"; buyButton.textContent = 'Maxed'; buyButton.disabled = true; }
-                 else { costP.textContent = `Cost: ${currentCost}`; buyButton.textContent = 'Buy'; buyButton.disabled = score < currentCost; }
-                itemDiv.appendChild(nameH3); itemDiv.appendChild(descP); itemDiv.appendChild(costP); itemDiv.appendChild(buyButton); shopItemsContainer.appendChild(itemDiv);
-            });
-             shopRefreshNeeded = false;
-        }
-        function buyUpgrade(upgradeId) { /* Keep as before */
-            const upgrade = shopUpgradeDefs.find(u => u.id === upgradeId); if (!upgrade || upgrade.level >= upgrade.maxLevel) return;
-            const cost = calculateUpgradeCost(upgrade);
-            if (score >= cost) {
-                score -= cost; gameStats.scoreSpent += cost; upgrade.level++; upgrade.apply(); gameStats.upgradesBought++;
-                if (upgrade.id === 'maxHealth') { player.health = Math.min(player.health + 20, playerStats.maxHealth); }
-                sounds.upgrade?.triggerAttackRelease("C5", "4n", Tone.now()); shopRefreshNeeded = true; populateShop(); updateUI(); checkAchievements();
-            }
-        }
-        function enterShop() { /* Keep as before */ checkAchievements(); setGameState('shop'); if (shopRefreshNeeded) { populateShop(); } }
-        function exitShop() { /* Keep as before */ setGameState('playing'); shopRefreshNeeded = true; startNextWave(); }
-
-        // --- Achievements Logic (kept as before) ---
-        function checkAchievements() { /* Keep as before */
-            let newAchievementUnlocked = false;
-            Object.keys(achievements).forEach(key => {
-                const ach = achievements[key]; const conditionMet = (key === 'highScore') ? ach.condition() : ach.condition(gameStats);
-                if (!ach.unlocked && conditionMet) { ach.unlocked = true; newAchievementUnlocked = true; showAchievementPopup(ach.name); saveAchievements(); updateAchievementsScreen(); console.log(`Achievement Unlocked: ${ach.name}`); }
-            });
-            if (newAchievementUnlocked) { sounds.achievement?.triggerAttackRelease(["C4", "E4", "G4"], "4n", Tone.now()); }
-        }
-        function showAchievementPopup(name) { /* Keep as before */
-            achievementPopupText.textContent = name; achievementPopup.style.display = 'block';
-            if (achievementPopup.timeoutId) { clearTimeout(achievementPopup.timeoutId); }
-            achievementPopup.timeoutId = setTimeout(() => { achievementPopup.style.display = 'none'; achievementPopup.timeoutId = null; }, 4000);
-        }
-        function populateAchievementsScreen() { /* Keep as before */
-            achievementsListContainer.innerHTML = ''; Object.values(achievements).forEach(ach => { const achDiv = document.createElement('div'); achDiv.classList.add('achievement'); if (ach.unlocked) { achDiv.classList.add('unlocked'); } const nameH3 = document.createElement('h3'); nameH3.textContent = ach.name; const descP = document.createElement('p'); descP.textContent = ach.description; achDiv.appendChild(nameH3); achDiv.appendChild(descP); achievementsListContainer.appendChild(achDiv); });
-        }
-        function updateAchievementsScreen() { /* Keep as before */ if (gameState === 'achievements') { populateAchievementsScreen(); } }
-        function showAchievements() { /* Keep as before */ setGameState('achievements'); populateAchievementsScreen(); }
-        function hideAchievements() { /* Keep as before */ setGameState('start'); }
-        function saveAchievements() { /* Keep as before */ try { const unlockedStatus = {}; Object.keys(achievements).forEach(key => { unlockedStatus[key] = achievements[key].unlocked; }); localStorage.setItem('waveDefenseAchievements_v2', JSON.stringify(unlockedStatus)); } catch (e) { console.error("Failed to save achievements:", e); } } // Incremented version
-        function loadAchievements() { /* Keep as before */ try { const savedStatus = localStorage.getItem('waveDefenseAchievements_v2'); if (savedStatus) { const unlockedStatus = JSON.parse(savedStatus); Object.keys(achievements).forEach(key => { if (unlockedStatus[key] !== undefined && achievements[key]) { achievements[key].unlocked = unlockedStatus[key]; } }); console.log("Loaded achievements:", unlockedStatus); } } catch (e) { console.error("Failed to load achievements:", e); localStorage.removeItem('waveDefenseAchievements_v2'); } } // Use incremented version
+        });
+   }
 
 
-        // --- Game Over (kept as before) ---
-        function gameOver() { /* Keep as before */
-             if (gameState === 'gameover') return; console.log("Game Over triggered"); sounds.gameOver?.triggerAttackRelease("C3", "1n", Tone.now()); checkAchievements(); setGameState('gameover'); messageTitle.textContent = "Game Over!"; const wavesSurvived = Math.max(0, currentWave - 1); messageText.textContent = `You survived ${wavesSurvived} wave${wavesSurvived === 1 ? '' : 's'} and scored ${score}.`; messageButton.textContent = "Restart"; messageButton.onclick = startGame;
-        }
+  // --- Sound Effects (Placeholder using Audio API - Basic Example) ---
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const sounds = {};
 
-        // --- Event Listeners (kept as before) ---
-        window.addEventListener('keydown', (e) => { /* Keep as before */ keys[e.key.toLowerCase()] = true; if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) { e.preventDefault(); } });
-        window.addEventListener('keyup', (e) => { /* Keep as before */ keys[e.key.toLowerCase()] = false; });
-        function getMousePos(canvas, evt) { /* Keep as before */ const rect = canvas.getBoundingClientRect(); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY } }
-        canvas.addEventListener('mousemove', (e) => { /* Keep as before */ const pos = getMousePos(canvas, e); mouse.x = pos.x; mouse.y = pos.y; });
-        window.addEventListener('mousedown', (e) => { /* Keep as before */ if (e.button === 0) { Tone.start(); if (e.target === canvas) { mouse.down = true; } } });
-        window.addEventListener('mouseup', (e) => { /* Keep as before */ if (e.button === 0) { mouse.down = false; } });
-        canvas.addEventListener('contextmenu', (e) => e.preventDefault()); /* Keep as before */
-        startButton.addEventListener('click', () => { Tone.start(); startGame(); }); /* Keep as before */
-        continueButton.addEventListener('click', exitShop); /* Keep as before */
-        achievementsButton.addEventListener('click', showAchievements); /* Keep as before */
-        backToStartButton.addEventListener('click', hideAchievements); /* Keep as before */
+  function loadSound(name, url) {
+      fetch(url)
+          .then(response => response.arrayBuffer())
+          .then(buffer => audioContext.decodeAudioData(buffer))
+          .then(decodedBuffer => {
+              sounds[name] = decodedBuffer;
+          })
+          .catch(error => {
+              console.error('Error loading sound:', url, error);
+          });
+  }
 
-        // --- Initialization (kept as before) ---
-        function resizeCanvas() { /* Keep as before */
-             const container = gameContainer; const containerWidth = container.clientWidth; const containerHeight = container.clientHeight; const targetAspectRatio = 16 / 9; let newWidth = containerWidth; let newHeight = containerWidth / targetAspectRatio; if (newHeight > containerHeight) { newHeight = containerHeight; newWidth = containerHeight * targetAspectRatio; } newWidth = Math.max(1, Math.floor(newWidth)); newHeight = Math.max(1, Math.floor(newHeight));
-             if (canvas.width !== newWidth || canvas.height !== newHeight) { canvas.width = newWidth; canvas.height = newHeight; console.log(`Canvas resized to: ${canvas.width}x${canvas.height}`); if (player && (gameState === 'playing' || gameState === 'shop')) { player.radius = canvas.width * 0.015; player.baseSpeed = canvas.width * 0.003; player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y)); } }
-             canvas.style.width = `${newWidth}px`; canvas.style.height = `${newHeight}px`; if (gameState === 'playing' || gameState === 'shop') { drawGame(); }
-        }
-        window.addEventListener('resize', resizeCanvas); /* Keep as before */
-        setTimeout(() => { /* Keep as before */ resizeCanvas(); if (!gameLoopId) { gameLoop(); } setGameState('start'); }, 100);
+  function playSound(name) {
+      const soundBuffer = sounds[name];
+      if (soundBuffer) {
+          const source = audioContext.createBufferSource();
+          source.buffer = soundBuffer;
+          source.connect(audioContext.destination);
+          source.start(0);
+      } else {
+          console.warn('Sound not loaded:', name);
+      }
+  }
 
-    </script>
+   // Load sounds (replace with actual sound file paths)
+  // loadSound('shoot', 'sounds/shoot.wav');
+  // loadSound('hit', 'sounds/hit.wav');
+  // loadSound('enemyDeath', 'sounds/enemyDeath.wav');
+  // loadSound('powerupCollect', 'sounds/powerupCollect.wav');
+  // loadSound('dash', 'sounds/dash.wav');
+  // loadSound('enemyShoot', 'sounds/enemyShoot.wav');
+  // loadSound('playerHit', 'sounds/playerHit.wav');
+
+
+  // --- Game Initialization and Reset ---
+  function resetGame() {
+     wave = 1;
+     score = 0;
+     coins = 0;
+     enemies = [];
+     playerProjectiles = [];
+     enemyProjectiles = [];
+     powerups = [];
+     particles = []; // Clear particles
+     effectAreas.length = 0; // Corrected: Clear array contents
+     upgrades = {};
+     allAchievements.forEach(a => {
+         a.achieved = false;
+         if (a.hasOwnProperty('count')) {
+             a.count = 0;
+         }
+     });
+     achievements = {};
+     totalEnemiesKilled = 0;
+     totalPowerupsCollected = 0;
+     totalUpgradesPurchased = 0;
+
+
+     player.health = 100;
+     player.maxHealth = 100;
+     player.speed = 5;
+     player.fireRate = 200;
+     player.damage = 10;
+     player.invincible = false;
+     player.coinMagnet = false;
+     player.lastShotTime = 0;
+     player.lastDashTime = 0;
+     player.isDashing = false;
+     delete player._originalSpeed;
+
+     currentWaveFeature = null;
+
+     currentStartTip = startTips[Math.floor(Math.random() * startTips.length)];
+
+     highScore = localStorage.getItem('highScore') || 0;
+  }
+
+  // Initial setup
+  resetGame();
+
+  // Start the game loop
+  gameLoop(performance.now());
+
+  // Handle window resizing
+  window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      player.x = canvas.width / 2;
+      player.y = canvas.height / 2;
+       effectAreas.forEach(area => {
+           if (area.type === 'slow') {
+               area.x = player.x;
+               area.y = player.y;
+           }
+       });
+       const shopDiv = document.getElementById('shop');
+       shopDiv.style.left = '50%';
+       shopDiv.style.top = '50%';
+       shopDiv.style.transform = 'translate(-50%, -50%)';
+  });
+
+
+</script>
 </body>
 </html>
