@@ -1,8 +1,5 @@
 Updates : 
 
-Chain Bullets
-Multi-Shot
-Checks for enemy health = 0 = dead
 Fixed the 10 placeholder abilitys and now they are functioning
 
 Core Gameplay:
