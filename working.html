@@ -512,7 +512,7 @@
 
   // --- Shop & Upgrades (Combined List) ---
   const allShopItems = [
-    // 15 Main Upgrades (Fleshed out)
+    // 15 Main Upgrades
     { id: 'speed', name: 'Increase Speed', cost: 50, type: 'upgrade', apply: () => player.speed += 1, description: "+1 Player Movement Speed" },
     { id: 'fireRate', name: 'Increase Fire Rate', cost: 75, type: 'upgrade', apply: () => player.fireRate = Math.max(20, player.fireRate - 20), description: "-20ms Fire Rate (min 20ms)" },
     { id: 'damage', name: 'Increase Damage', cost: 60, type: 'upgrade', apply: () => player.damage += 5, description: "+5 Projectile Damage" },
@@ -529,7 +529,7 @@
     { id: 'powerupDuration', name: 'Increase Powerup Duration', cost: 130, type: 'upgrade', apply: () => { if (!upgrades.powerupDuration) upgrades.powerupDuration = 0; upgrades.powerupDuration += 0.1; }, description: "+10% Powerup Duration" },
     { id: 'enemyHealthReduction', name: 'Reduce Next Wave Health', cost: 100, type: 'upgrade', apply: () => { if (!upgrades.enemyHealthReduction) upgrades.enemyHealthReduction = 0; upgrades.enemyHealthReduction += 0.05; }, description: "-5% Next Wave Enemy Health (Max 50%)" },
 
-    // 10 Passive Items (New Additions and Implemented)
+    // 10 Passive Items
     { id: 'passiveHealthRegen', name: 'Passive Health Regen', cost: 150, type: 'passive', apply: () => { if (!upgrades.passiveHealthRegen) upgrades.passiveHealthRegen = 0; upgrades.passiveHealthRegen += 0.05; }, description: "+0.05 Health Regen per second" },
     { id: 'passiveCoinGain', name: 'Passive Coin Gain', cost: 120, type: 'passive', apply: () => { if (!upgrades.passiveCoinGain) upgrades.passiveCoinGain = 0; upgrades.passiveCoinGain += 0.5; }, description: "+0.5 Coins per second" },
     { id: 'enemySpeedSlow', name: 'Enemy Speed Aura', cost: 200, type: 'passive', apply: () => { if (!upgrades.enemySpeedSlow) upgrades.enemySpeedSlow = 0; upgrades.enemySpeedSlow += 0.02; }, description: "Slows nearby enemies" },
@@ -694,21 +694,27 @@
        coins += Math.round(coinsDropped);
 
       score += 10 * (1 + (upgrades.xpBonus || 0) * 0.1);
-      experience += 10; // Add raw experience (can be used for future leveling)
+      experience += 10;
       totalEnemiesKilled++;
       createPowerup(enemy.x, enemy.y);
 
       if (enemy.type === 'splitter') {
-          for (let i = 0; i < enemy.splitCount; i++) {
-              createEnemy(
-                  enemyTypes.find(t => t.name === 'Splitter'),
-                  enemy.x + (Math.random() - 0.5) * 20,
-                  enemy.y + (Math.random() - 0.5) * 20,
-                  enemy.radius * enemy.splitSizeRatio,
-                  enemy.health * enemy.splitHealthRatio,
-                  enemy.speed * 1.2,
-                  enemy.damage
-              );
+          const basicEnemyType = enemyTypes.find(t => t.name === 'Basic'); // Find the Basic enemy type data
+          if (basicEnemyType) {
+              for (let i = 0; i < 3; i++) { // Spawn exactly 3 enemies
+                  createEnemy(
+                      basicEnemyType, // Use the Basic enemy type data
+                      enemy.x + (Math.random() - 0.5) * 30, // Spawn slightly spread out
+                      enemy.y + (Math.random() - 0.5) * 30,
+                      basicEnemyType.size, // Use Basic enemy size
+                      basicEnemyType.health, // Use Basic enemy health
+                      basicEnemyType.speed, // Use Basic enemy speed
+                      basicEnemyType.damage, // Use Basic enemy damage
+                      basicEnemyType.coinDrop // Use Basic enemy coin drop
+                  );
+              }
+          } else {
+              console.error("Basic enemy type not found for splitter spawn!");
           }
       }
         if (enemy.type === 'bomber') {
@@ -944,7 +950,7 @@
                console.log("Critical Hit!");
            }
             if (upgrades.lifeSteal > 0) {
-                player.health = Math.min(player.maxHealth, player.health + damageDealt * (upgrades.lifeSteal || 0)); // Use upgrade value
+                player.health = Math.min(player.maxHealth, player.health + damageDealt * (upgrades.lifeSteal || 0));
             }
              if (upgrades.aoeRadius > 0) {
                  console.log("Applying Projectile AOE");
