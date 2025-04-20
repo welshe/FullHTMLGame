@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wave Defense TD Enhanced</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        /* --- Base Styles (Keep as before) --- */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #1a1a1a;
+            font-family: 'Press Start 2P', cursive;
+            color: #fff;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 95vw;
+            height: 90vh;
+            max-width: 1200px;
+        }
+        canvas {
+            background-color: #2b2b2b; /* Slightly lighter dark background */
+            display: block;
+            border: 3px solid #fff;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            width: 100%;
+            height: auto;
+            max-height: 100%;
+            aspect-ratio: 16 / 9;
+            image-rendering: pixelated;
+            cursor: crosshair; /* Change cursor for aiming */
+        }
+
+        /* --- UI Container Styles (Keep as before) --- */
+         #uiContainer {
+            position: absolute;
+            top: 10px;
+            left: 5%;
+            right: 5%;
+            width: 90%;
+            display: none; /* Hidden by default */
+            justify-content: space-between;
+            font-size: clamp(10px, 1.5vw, 14px);
+            pointer-events: none;
+            text-shadow: 1px 1px 2px #000;
+            z-index: 5;
+        }
+        #uiContainer.visible { display: flex; }
+        #uiContainer span {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+         /* Style for temporary power-up effects */
+        #powerupIndicator {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: clamp(10px, 1.2vw, 12px);
+            z-index: 5;
+            display: none; /* Hidden by default */
+            color: #ffdd57; /* Yellowish */
+        }
+
+
+        /* --- Screen Overlay Styles (Keep as before) --- */
+        .screen-overlay {
+             position: absolute;
+             top: 0; left: 0; width: 100%; height: 100%;
+             background-color: rgba(0, 0, 0, 0.85);
+             display: flex; flex-direction: column;
+             align-items: center; justify-content: center;
+             text-align: center; z-index: 10;
+             padding: 20px; box-sizing: border-box;
+        }
+        #startScreen { background-color: rgba(0, 0, 0, 0.85); }
+        #shopScreen { background-color: rgba(0, 0, 0, 0.9); display: none; }
+        #achievementsScreen { background-color: rgba(0, 0, 0, 0.9); display: none; justify-content: flex-start; overflow-y: auto; z-index: 15; }
+        #messageBox {
+            background-color: rgba(0, 0, 0, 0.9); border: 2px solid #fff;
+            padding: 30px; border-radius: 10px; text-align: center;
+            z-index: 20; display: none; box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: auto; height: auto; max-width: 80%;
+        }
+
+        /* --- Start Screen Styles (Keep as before) --- */
+        #startScreen h1 { font-size: clamp(1.8em, 5vw, 2.5em); margin-bottom: 20px; color: #ffcc00; text-shadow: 2px 2px 4px #000; }
+        #startScreen p { margin-bottom: 15px; line-height: 1.5; max-width: 80%; font-size: clamp(0.8em, 2vw, 1em); }
+        .button { font-family: 'Press Start 2P', cursive; background-color: #4CAF50; border: none; color: white; padding: clamp(10px, 2vw, 15px) clamp(20px, 4vw, 32px); text-align: center; text-decoration: none; display: inline-block; font-size: clamp(12px, 2.5vw, 16px); margin: 10px 5px; cursor: pointer; border-radius: 8px; transition: background-color 0.3s ease, transform 0.1s ease; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border-bottom: 4px solid #367c39; }
+        .button:hover { background-color: #45a049; }
+        .button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); border-bottom-width: 2px; }
+        .button.secondary { background-color: #007bff; border-bottom-color: #0056b3; }
+        .button.secondary:hover { background-color: #0069d9; }
+        .difficulty-select, .bonus-select { margin-top: 20px; font-size: clamp(0.8em, 2vw, 1em); }
+        .difficulty-select label, .bonus-select label { margin: 5px 10px; display: inline-block; }
+
+        /* --- Shop Screen Styles (Keep as before, adjust grid if needed) --- */
+        #shopScreen h2 { margin-bottom: 20px; color: #ffcc00; font-size: clamp(1.5em, 4vw, 2em); }
+        #shopScreen p { font-size: clamp(0.8em, 2vw, 1em); margin-bottom: 15px; }
+        #shopItems { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); /* Adjusted min width */ gap: 15px; width: 90%; max-width: 900px; /* Increased max width */ max-height: 65vh; overflow-y: auto; margin-bottom: 20px; padding: 10px; background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; }
+        .shopItem { background-color: #444; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #666; display: flex; flex-direction: column; justify-content: space-between; } /* Flex for button alignment */
+        .shopItem h3 { font-size: clamp(0.9em, 2vw, 1em); margin-bottom: 5px; color: #eee; }
+        .shopItem p { font-size: clamp(0.7em, 1.8vw, 0.8em); margin-bottom: 10px; color: #ccc; min-height: 3.5em; flex-grow: 1; } /* Allow description to grow */
+        .shopItem .cost { font-weight: bold; color: #ffcc00; margin-bottom: 10px; font-size: clamp(0.8em, 1.9vw, 0.9em); }
+        .shopItem button { font-family: 'Press Start 2P', cursive; background-color: #28a745; border: none; color: white; padding: 8px 16px; text-align: center; font-size: clamp(10px, 2vw, 12px); cursor: pointer; border-radius: 5px; transition: background-color 0.3s ease; width: 100%; border-bottom: 3px solid #1c7430; margin-top: auto; } /* Push button to bottom */
+        .shopItem button:hover:not(:disabled) { background-color: #218838; }
+        .shopItem button:disabled { background-color: #6c757d; cursor: not-allowed; border-bottom-color: #494f54; }
+
+        /* --- Message Box Styles (Keep as before) --- */
+        #messageBox h3 { margin-top: 0; margin-bottom: 15px; color: #ffcc00; font-size: clamp(1.2em, 3vw, 1.5em); }
+        #messageBox p { margin-bottom: 20px; font-size: clamp(0.9em, 2vw, 1.1em); }
+
+        /* --- Achievements Styles (Keep as before) --- */
+        #achievementsScreen h2 { margin-bottom: 20px; color: #ffcc00; font-size: clamp(1.5em, 4vw, 2em); }
+        #achievementsList { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; width: 90%; max-width: 900px; }
+        .achievement { background-color: #444; padding: 15px; border-radius: 8px; border: 1px solid #666; opacity: 0.5; transition: opacity 0.3s ease, transform 0.3s ease; }
+        .achievement.unlocked { opacity: 1; border-color: #ffcc00; transform: scale(1.02); }
+        .achievement h3 { font-size: clamp(0.9em, 2vw, 1em); margin-bottom: 5px; color: #eee; }
+        .achievement.unlocked h3 { color: #ffcc00; }
+        .achievement p { font-size: clamp(0.7em, 1.8vw, 0.8em); color: #ccc; }
+        #achievementPopup { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #28a745; color: white; padding: 15px 25px; border-radius: 8px; z-index: 30; display: none; font-size: clamp(12px, 2vw, 14px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); animation: fadeInOut 4s ease-in-out; width: max-content; max-width: 80%; }
+        @keyframes fadeInOut { 0%, 100% { opacity: 0; transform: translate(-50%, 20px); } 10%, 90% { opacity: 1; transform: translate(-50%, 0); } }
+
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="uiContainer">
+            <span id="healthDisplay">Health: 100</span>
+            <span id="waveDisplay">Wave: 1</span>
+            <span id="scoreDisplay">Score: 0</span>
+            <span id="enemyDisplay">Enemies: 0</span>
+        </div>
+        <div id="powerupIndicator"></div>
+
+
+        <div id="startScreen" class="screen-overlay">
+            <h1>Wave Defense TD Enhanced</h1>
+            <p>Use WASD or Arrow Keys to Move. Left Click to Shoot.</p>
+            <p>Survive the waves and buy upgrades! Look out for power-ups!</p>
+            <div class="difficulty-select">
+                Difficulty:
+                <label><input type="radio" name="difficulty" value="0.8" checked> Easy</label>
+                <label><input type="radio" name="difficulty" value="1.0"> Medium</label>
+                <label><input type="radio" name="difficulty" value="1.3"> Hard</label>
+            </div>
+            <div class="bonus-select">
+                 Starting Bonus:
+                <label><input type="radio" name="startBonus" value="health" checked> +20 Max Health</label>
+                <label><input type="radio" name="startBonus" value="firerate"> +10% Fire Rate</label>
+                <label><input type="radio" name="startBonus" value="score"> +50 Starting Score</label>
+            </div>
+            <button id="startButton" class="button">Start Game</button>
+            <button id="achievementsButton" class="button secondary">Achievements</button>
+        </div>
+
+        <div id="shopScreen" class="screen-overlay">
+            <h2>Upgrade Shop</h2>
+            <p>Wave Cleared! Spend your score (Current: <span id="shopScore">0</span>)</p>
+            <div id="shopItems">
+                </div>
+            <button id="continueButton" class="button">Continue to Next Wave</button>
+        </div>
+
+        <div id="achievementsScreen" class="screen-overlay">
+            <h2>Achievements</h2>
+            <div id="achievementsList">
+                </div>
+            <button id="backToStartButton" class="button">Back</button>
+        </div>
+
+         <div id="messageBox">
+            <h3 id="messageTitle">Game Over!</h3>
+            <p id="messageText">You survived X waves.</p>
+            <button id="messageButton" class="button">Restart</button>
+        </div>
+
+    </div> <div id="achievementPopup">
+        <h3>Achievement Unlocked!</h3>
+        <p id="achievementPopupText"></p>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('gameContainer');
+        const uiContainer = document.getElementById('uiContainer');
+        const healthDisplay = document.getElementById('healthDisplay');
+        const waveDisplay = document.getElementById('waveDisplay');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const enemyDisplay = document.getElementById('enemyDisplay');
+        const powerupIndicator = document.getElementById('powerupIndicator'); // Power-up indicator element
+        const startScreen = document.getElementById('startScreen');
+        const startButton = document.getElementById('startButton');
+        const achievementsButton = document.getElementById('achievementsButton');
+        const shopScreen = document.getElementById('shopScreen');
+        const shopItemsContainer = document.getElementById('shopItems');
+        const shopScoreDisplay = document.getElementById('shopScore');
+        const continueButton = document.getElementById('continueButton');
+        const achievementsScreen = document.getElementById('achievementsScreen');
+        const achievementsListContainer = document.getElementById('achievementsList');
+        const backToStartButton = document.getElementById('backToStartButton');
+        const messageBox = document.getElementById('messageBox');
+        const messageTitle = document.getElementById('messageTitle');
+        const messageText = document.getElementById('messageText');
+        const messageButton = document.getElementById('messageButton');
+        const achievementPopup = document.getElementById('achievementPopup');
+        const achievementPopupText = document.getElementById('achievementPopupText');
+
+        // --- Game State ---
+        let gameState = 'start'; // 'start', 'playing', 'shop', 'gameover', 'achievements'
+        let gameLoopId = null;
+        let keys = {};
+        let mouse = { x: 0, y: 0, down: false };
+        let difficultyModifier = 1.0;
+        let startBonus = 'health';
+
+        // --- Game Variables ---
+        let player;
+        let enemies = [];
+        let bullets = [];
+        let enemyBullets = []; // Array for enemy projectiles
+        let powerUps = []; // Array for power-up drops
+        let effects = []; // Array for visual effects like lightning
+        let currentWave = 0;
+        let score = 0;
+        let waveActive = false;
+        let shopRefreshNeeded = true;
+        let lastWaveFeature = null;
+        const POWERUP_DROP_CHANCE = 0.1; // 10% chance for an enemy to drop a power-up
+
+        // --- Player Stats ---
+        const basePlayerStats = {
+            maxHealth: 100, healthRegen: 0.01, speed: 3,
+            fireRate: 10, bulletDamage: 10, bulletSpeed: 7,
+            piercing: 0, homingStrength: 0, pickupRadius: 50,
+            scoreMultiplier: 1.0,
+            // New Stats for Upgrades
+            multiShotLevel: 0, // 0 = single shot
+            chainLightningLevel: 0, // 0 = no chain
+        };
+        let playerStats = { ...basePlayerStats };
+        // Temporary power-up effects tracking
+        let activePowerUps = {
+            rapidFire: { active: false, timer: 0, originalFireRate: 0 },
+            // Add other power-ups like shield here
+        };
+
+        // --- Achievements & Game Stats (Keep as before) ---
+         const achievements = {
+            survivor1: { name: "Beginner Survivor", description: "Survive 5 waves.", unlocked: false, condition: () => currentWave > 5 },
+            survivor2: { name: "Intermediate Survivor", description: "Survive 10 waves.", unlocked: false, condition: () => currentWave > 10 },
+            survivor3: { name: "Expert Survivor", description: "Survive 20 waves.", unlocked: false, condition: () => currentWave > 20 },
+            killer1: { name: "Novice Killer", description: "Defeat 100 enemies.", unlocked: false, condition: (stats) => stats.enemiesKilled >= 100 },
+            killer2: { name: "Adept Killer", description: "Defeat 500 enemies.", unlocked: false, condition: (stats) => stats.enemiesKilled >= 500 },
+            killer3: { name: "Master Killer", description: "Defeat 1000 enemies.", unlocked: false, condition: (stats) => stats.enemiesKilled >= 1000 },
+            upgrader: { name: "Enhancer", description: "Buy 5 upgrades in a single run.", unlocked: false, condition: (stats) => stats.upgradesBought >= 5 },
+            spender: { name: "Big Spender", description: "Spend 5000 score in the shop.", unlocked: false, condition: (stats) => stats.scoreSpent >= 5000 },
+            highScore: { name: "High Scorer", description: "Reach a score of 10000.", unlocked: false, condition: () => score >= 10000 },
+            closeCall: { name: "Close Call", description: "Survive a wave with < 10% health.", unlocked: false, condition: (stats) => stats.closeCallOccurred },
+            chainReaction: { name: "Chain Reaction", description: "Hit 3+ enemies with Chain Lightning.", unlocked: false, condition: (stats) => stats.maxChain >= 3 }, // New achievement
+        };
+        let gameStats = {
+            enemiesKilled: 0, upgradesBought: 0, scoreSpent: 0,
+            closeCallOccurred: false, maxChain: 0, // Track max chain lightning hits
+        };
+        loadAchievements();
+
+        // --- Sound Effects (Keep as before, add new ones if desired) ---
+        let sounds = {};
+        try {
+            sounds = {
+                shoot: new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(),
+                enemyShoot: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.08, sustain: 0, release: 0.1 }, volume: -18 }).toDestination(), // Enemy shoot sound
+                hit: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.05, sustain: 0, release: 0.1 }, volume: -10 }).toDestination(),
+                enemyDeath: new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -12 }).toDestination(),
+                upgrade: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }, volume: -8 }).toDestination(),
+                gameOver: new Tone.Synth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.1, decay: 0.5, sustain: 0, release: 0.5 }, volume: -5 }).toDestination(),
+                waveStart: new Tone.Synth({ oscillator: { type: "pulse", width: 0.6 }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.3 }, volume: -10 }).toDestination(),
+                achievement: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }, volume: -7 }).toDestination(),
+                powerup: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.3 }, volume: -9 }).toDestination(), // Powerup pickup sound
+                lightning: new Tone.Synth({ oscillator: { type: "sawtooth", detune: 15 }, envelope: { attack: 0.01, decay: 0.15, sustain: 0, release: 0.1 }, volume: -14 }).toDestination(), // Lightning sound
+            };
+        } catch (error) { console.error("Tone.js initialization failed:", error); sounds = new Proxy({}, { get: () => ({ triggerAttackRelease: () => {} }) }); }
+
+        // --- Utility Functions (Keep as before) ---
+        function degToRad(degrees) { return degrees * (Math.PI / 180); }
+        function distance(x1, y1, x2, y2) { const dx = x2 - x1; const dy = y2 - y1; return Math.sqrt(dx * dx + dy * dy); }
+        function getRandomInt(min, max) { min = Math.ceil(min); max = Math.floor(max); return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+        // --- Game Objects ---
+
+        // ** Player Class Modifications **
+        class Player {
+             constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = canvas.width * 0.015;
+                this.baseSpeed = canvas.width * 0.003;
+                this.color = '#00ff00';
+                this.health = playerStats.maxHealth;
+                this.shootCooldown = 0;
+                this.targetEnemy = null;
+                this.aimAngle = 0;
+            }
+
+            update() {
+                // --- Movement (Keep as before) ---
+                this.radius = canvas.width * 0.015;
+                let currentSpeed = this.baseSpeed * (playerStats.speed / basePlayerStats.speed);
+                let dx = 0; let dy = 0;
+                if (keys['w'] || keys['ArrowUp']) dy -= currentSpeed;
+                if (keys['s'] || keys['ArrowDown']) dy += currentSpeed;
+                if (keys['a'] || keys['ArrowLeft']) dx -= currentSpeed;
+                if (keys['d'] || keys['ArrowRight']) dx += currentSpeed;
+                if (dx !== 0 && dy !== 0) { const magnitude = Math.sqrt(dx*dx + dy*dy); dx = (dx / magnitude) * currentSpeed; dy = (dy / magnitude) * currentSpeed; }
+                this.x += dx; this.y += dy;
+                this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+                this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+
+                // --- Health Regen (Keep as before) ---
+                if (this.health < playerStats.maxHealth) { this.health = Math.min(playerStats.maxHealth, this.health + playerStats.healthRegen); }
+
+                // --- Auto Aim (Keep as before) ---
+                this.findTarget();
+                if (this.targetEnemy) { this.aimAngle = Math.atan2(this.targetEnemy.y - this.y, this.targetEnemy.x - this.x); }
+                else { this.aimAngle = 0; }
+
+                // --- Shooting ---
+                if (this.shootCooldown > 0) { this.shootCooldown--; }
+                // Apply rapid fire power-up effect
+                const currentFireRate = activePowerUps.rapidFire.active ? playerStats.fireRate * 0.5 : playerStats.fireRate; // 50% faster fire rate
+                if (mouse.down && this.shootCooldown <= 0 && enemies.length > 0) {
+                    this.shoot();
+                    this.shootCooldown = currentFireRate; // Use potentially modified fire rate
+                }
+
+                // --- Update Active Power-ups ---
+                this.updatePowerUps();
+            }
+
+            findTarget() { /* Keep as before */
+                let closestDist = Infinity; this.targetEnemy = null;
+                enemies.forEach(enemy => { if (enemy.health <= 0) return; const dist = distance(this.x, this.y, enemy.x, enemy.y); if (dist < closestDist) { closestDist = dist; this.targetEnemy = enemy; } });
+            }
+
+            shoot() {
+                const angleToShoot = this.aimAngle;
+                const bulletRadius = canvas.width * 0.005;
+                const bulletSpeed = canvas.width * 0.007 * (playerStats.bulletSpeed / basePlayerStats.bulletSpeed);
+
+                // Multi-shot Logic
+                const numShots = 1 + playerStats.multiShotLevel; // Base shot + levels
+                const spreadAngle = degToRad(10); // Angle between multi-shots
+                const startAngle = angleToShoot - (spreadAngle * (numShots - 1) / 2);
+
+                for (let i = 0; i < numShots; i++) {
+                    const shotAngle = startAngle + (i * spreadAngle);
+                    const bulletX = this.x + Math.cos(shotAngle) * (this.radius + bulletRadius + 2);
+                    const bulletY = this.y + Math.sin(shotAngle) * (this.radius + bulletRadius + 2);
+
+                    bullets.push(new Bullet(
+                        bulletX, bulletY, shotAngle, bulletSpeed,
+                        playerStats.bulletDamage, playerStats.piercing,
+                        playerStats.homingStrength, this.targetEnemy, // Pass target for homing
+                        playerStats.chainLightningLevel // Pass chain lightning level
+                    ));
+                }
+                sounds.shoot?.triggerAttackRelease("C5", "8n", Tone.now());
+            }
+
+            updatePowerUps() {
+                let indicatorText = "";
+                // Rapid Fire
+                if (activePowerUps.rapidFire.active) {
+                    activePowerUps.rapidFire.timer--;
+                    indicatorText += `Rapid Fire: ${Math.ceil(activePowerUps.rapidFire.timer / 60)}s `;
+                    if (activePowerUps.rapidFire.timer <= 0) {
+                        activePowerUps.rapidFire.active = false;
+                        // No need to restore fire rate here, it's checked in update()
+                        console.log("Rapid Fire ended");
+                    }
+                }
+                // Add checks for other power-ups (e.g., shield) here
+
+                // Update UI indicator
+                if (indicatorText) {
+                    powerupIndicator.textContent = indicatorText.trim();
+                    powerupIndicator.style.display = 'block';
+                } else {
+                    powerupIndicator.style.display = 'none';
+                }
+            }
+
+
+            draw() { /* Keep as before */
+                ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = Math.max(1, canvas.width * 0.003); ctx.beginPath(); ctx.moveTo(this.x, this.y);
+                ctx.lineTo( this.x + Math.cos(this.aimAngle) * (this.radius + 5), this.y + Math.sin(this.aimAngle) * (this.radius + 5) ); ctx.stroke();
+            }
+
+            takeDamage(amount) { /* Keep as before */
+                this.health -= amount; sounds.hit?.triggerAttackRelease("E4", "16n", Tone.now());
+                if (this.health <= 0) { this.health = 0; gameOver(); }
+                updateUI();
+            }
+
+             collectPowerUp(powerUp) {
+                 console.log(`Collected power-up: ${powerUp.type}`);
+                 sounds.powerup?.triggerAttackRelease("A5", "8n", Tone.now());
+
+                 switch(powerUp.type) {
+                     case 'health':
+                         this.health = Math.min(playerStats.maxHealth, this.health + 25); // Heal 25 HP
+                         updateUI();
+                         break;
+                     case 'rapidFire':
+                         if (!activePowerUps.rapidFire.active) {
+                             // Store original only if not already active
+                             activePowerUps.rapidFire.originalFireRate = playerStats.fireRate;
+                         }
+                         activePowerUps.rapidFire.active = true;
+                         activePowerUps.rapidFire.timer = powerUp.duration * 60; // Duration in frames
+                         // Fire rate modification happens in Player.update()
+                         console.log("Rapid Fire activated");
+                         break;
+                     // Add cases for other power-up types here
+                 }
+             }
+        }
+
+        // ** Base Enemy Class (Can be inherited or used directly) **
+        class Enemy {
+             constructor(x, y, waveData, type = 'basic') {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.isDead = false; // Flag to prevent multiple death triggers
+
+                // Base stats - potentially overridden by type/waveData
+                this.baseSpeed = canvas.width * 0.001 * (1 + (currentWave * 0.05));
+                this.radius = canvas.width * 0.012 * (waveData.sizeMultiplier || 1);
+                this.color = waveData.color || '#ff0000';
+                this.maxHealth = (20 + currentWave * 5) * (waveData.healthMultiplier || 1) * difficultyModifier;
+                this.damage = 10 + currentWave;
+                this.scoreValue = (10 + currentWave) * (waveData.scoreMultiplier || 1);
+
+                // Apply wave feature modifiers
+                this.speed = this.baseSpeed * (waveData.speedMultiplier || 1) * difficultyModifier;
+                this.canDodge = waveData.canDodge || false;
+                this.regenerates = waveData.regenerates || false;
+
+                // Initialize common properties
+                this.health = this.maxHealth;
+                this.dodgeCooldown = 0;
+                this.dodgeDuration = 0;
+                this.dodgeAngle = 0;
+            }
+
+            update() {
+                 if (!player || this.health <= 0) return; // Stop updating if dead (health check is sufficient here)
+
+                 // --- Movement & Dodging (Keep basic logic) ---
+                 if (this.canDodge && this.dodgeCooldown <= 0 && Math.random() < 0.01) { this.dodgeCooldown = getRandomInt(120, 300); this.dodgeDuration = getRandomInt(20, 40); this.dodgeAngle = Math.random() * Math.PI * 2; }
+                 let targetX = player.x; let targetY = player.y; let moveSpeed = this.speed;
+                 if (this.dodgeDuration > 0) { targetX = this.x + Math.cos(this.dodgeAngle) * 100; targetY = this.y + Math.sin(this.dodgeAngle) * 100; moveSpeed *= 1.5; this.dodgeDuration--; }
+                 else if (this.dodgeCooldown > 0) { this.dodgeCooldown--; }
+                 const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                 this.x += Math.cos(angle) * moveSpeed; this.y += Math.sin(angle) * moveSpeed;
+
+                 // --- Collision with Player (Keep as before) ---
+                 const distToPlayer = distance(this.x, this.y, player.x, player.y);
+                 if (distToPlayer < this.radius + player.radius) { player.takeDamage(this.damage); this.health = 0; } // Set health to 0 on collision
+
+                 // --- Regeneration (Keep as before) ---
+                 if (this.regenerates && this.health < this.maxHealth && this.health > 0) { this.health = Math.min(this.maxHealth, this.health + 0.02 * difficultyModifier); }
+            }
+
+             drawHealthBar() {
+                 const healthBarWidth = this.radius * 2;
+                 const healthBarHeight = Math.max(3, canvas.width * 0.004);
+                 const healthBarOffsetY = this.radius + healthBarHeight + 2;
+                 // Use Math.max to prevent negative health percentages visually
+                 const healthPercent = Math.max(0, this.health / this.maxHealth);
+                 ctx.fillStyle = '#555';
+                 ctx.fillRect(this.x - this.radius, this.y - healthBarOffsetY, healthBarWidth, healthBarHeight);
+                 ctx.fillStyle = healthPercent > 0.5 ? '#00cc00' : healthPercent > 0.2 ? '#cccc00' : '#cc0000';
+                 ctx.fillRect(this.x - this.radius, this.y - healthBarOffsetY, healthBarWidth * healthPercent, healthBarHeight);
+             }
+
+            draw() {
+                 // Only draw if health is positive (prevents drawing after removal check)
+                 if (this.health > 0 || !this.isDead) { // Draw if health > 0 OR if isDead hasn't been fully processed yet
+                     this.drawHealthBar();
+                     // Draw basic enemy body
+                     ctx.fillStyle = this.color;
+                     ctx.beginPath();
+                     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                     ctx.fill();
+                 }
+            }
+
+            takeDamage(amount) {
+                // Prevent taking damage if already dead or health is already <= 0
+                if (this.isDead || this.health <= 0) return;
+
+                this.health -= amount;
+
+                // Process death only if health drops to 0 or below *in this call*
+                if (this.health <= 0) {
+                    this.isDead = true; // Mark as dead *immediately*
+                    addScore(this.scoreValue);
+                    gameStats.enemiesKilled++;
+                    sounds.enemyDeath?.triggerAttackRelease("8n", Tone.now());
+
+                    // Power-up Drop Logic
+                    if (Math.random() < POWERUP_DROP_CHANCE) {
+                        spawnPowerUp(this.x, this.y);
+                    }
+
+                    // Check achievements immediately after confirming death
+                    checkAchievements();
+                }
+            }
+        }
+
+        // ** New Enemy Type: Shooter **
+        class ShooterEnemy extends Enemy {
+            constructor(x, y, waveData) {
+                super(x, y, waveData, 'shooter'); // Pass type
+                this.color = '#ff9933'; // Distinct color (Orange)
+                this.shootCooldown = getRandomInt(120, 180); // Frames between shots
+                this.bulletSpeed = canvas.width * 0.004;
+                this.bulletDamage = 5 + Math.floor(currentWave / 2);
+                this.scoreValue *= 1.2; // Worth slightly more
+            }
+
+            update() {
+                // Don't call super.update() if dead, base class handles this check now
+                if (this.health <= 0) return;
+                super.update(); // Call base enemy update for movement, collision, etc.
+                if (!player) return; // Check player exists after super call
+
+                // Shooting Logic
+                this.shootCooldown--;
+                if (this.shootCooldown <= 0) {
+                    const angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
+                    enemyBullets.push(new EnemyBullet(this.x, this.y, angleToPlayer, this.bulletSpeed, this.bulletDamage));
+                    this.shootCooldown = getRandomInt(100, 160) / difficultyModifier; // Reset cooldown (affected by difficulty)
+                    sounds.enemyShoot?.triggerAttackRelease("A3", "16n", Tone.now());
+                }
+            }
+
+            draw() {
+                // Only draw if alive (base class draw now includes this check)
+                super.draw();
+                // Add visual indicator only if drawing occurred
+                 if (this.health > 0 || !this.isDead) {
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+         // ** New Enemy Type: Splitter **
+        class SplitterEnemy extends Enemy {
+            constructor(x, y, waveData, isChild = false) {
+                super(x, y, waveData, 'splitter');
+                this.isChild = isChild;
+                this.color = '#aa44ff'; // Purple
+                if (isChild) {
+                    this.maxHealth *= 0.4; // Children are weaker
+                    this.health = this.maxHealth;
+                    this.radius *= 0.6;
+                    this.speed *= 1.2; // Children are faster
+                    this.scoreValue *= 0.3; // Children worth less
+                    this.damage *= 0.5;
+                } else {
+                     this.scoreValue *= 1.5; // Parent worth more
+                }
+            }
+
+            takeDamage(amount) {
+                // Store health before calling super.takeDamage
+                const healthBefore = this.health;
+                // Call base takeDamage - this handles setting isDead and basic death processing
+                super.takeDamage(amount);
+
+                // Check if health dropped below zero *in this call* and if it's a parent
+                if (healthBefore > 0 && this.health <= 0 && !this.isChild) {
+                    this.split();
+                }
+            }
+
+            split() {
+                 console.log("Splitter splitting!");
+                 const numChildren = 2;
+                 for (let i = 0; i < numChildren; i++) {
+                     const angle = (Math.PI * 2 / numChildren) * i;
+                     const childX = this.x + Math.cos(angle) * this.radius * 1.5;
+                     const childY = this.y + Math.sin(angle) * this.radius * 1.5;
+                     // Need to get current waveData somehow, maybe pass it during spawn?
+                     // For now, create a generic waveData for children
+                     const childWaveData = { healthMultiplier: 1, sizeMultiplier: 1, speedMultiplier: 1 }; // Simplified
+                     enemies.push(new SplitterEnemy(childX, childY, childWaveData, true));
+                 }
+            }
+
+             draw() {
+                 // Only draw if alive (base class draw now includes this check)
+                 super.draw();
+                 // Add visual indicator only if drawing occurred
+                 if (this.health > 0 || !this.isDead) {
+                    ctx.fillStyle = this.isChild ? '#ddd' : '#fff';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y - this.radius * 0.6);
+                    ctx.lineTo(this.x - this.radius * 0.5, this.y + this.radius * 0.4);
+                    ctx.lineTo(this.x + this.radius * 0.5, this.y + this.radius * 0.4);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
+
+        // ** Bullet Class Modifications **
+        class Bullet {
+             constructor(x, y, angle, speed, damage, piercing, homingStrength, initialTarget, chainLevel = 0) {
+                this.x = x; this.y = y;
+                this.radius = canvas.width * 0.005;
+                this.color = '#ffff00';
+                this.speed = speed; this.damage = damage;
+                this.angle = angle; this.piercing = piercing;
+                this.homingStrength = homingStrength;
+                this.target = (initialTarget && initialTarget.health > 0) ? initialTarget : null;
+                this.piercedEnemies = new Set();
+                this.chainLevel = chainLevel; // How many more times it can chain
+                this.chainSourcePos = { x: x, y: y }; // Track origin for lightning effect
+            }
+
+            update() { /* Keep Homing logic as before */
+                if (this.homingStrength > 0) { if (!this.target || this.target.health <= 0) { this.findNewTarget(); } if (this.target) { const angleToTarget = Math.atan2(this.target.y - this.y, this.target.x - this.x); let angleDiff = angleToTarget - this.angle; while (angleDiff < -Math.PI) angleDiff += Math.PI * 2; while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; const maxTurn = Math.PI * 0.05 * this.homingStrength; this.angle += Math.max(-maxTurn, Math.min(maxTurn, angleDiff * this.homingStrength * 0.1)); this.angle = (this.angle + Math.PI * 2) % (Math.PI * 2); } }
+                this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed;
+            }
+
+            findNewTarget() { /* Keep as before */
+                let closestDist = canvas.width * 0.15; let newTarget = null;
+                enemies.forEach(enemy => { if (enemy.health > 0 && !this.piercedEnemies.has(enemy)) { const dist = distance(this.x, this.y, enemy.x, enemy.y); if (dist < closestDist) { closestDist = dist; newTarget = enemy; } } });
+                this.target = newTarget;
+            }
+
+            draw() { /* Keep as before */
+                ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+            }
+
+            // --- Chain Lightning Logic ---
+            tryChainLightning(hitEnemy) {
+                if (this.chainLevel <= 0) return 0; // No more chains left
+
+                const chainRange = canvas.width * 0.15; // How far lightning can jump
+                const chainDamageFactor = 0.7; // Damage reduction per jump
+                let chainedTargets = 0;
+                let currentTarget = hitEnemy;
+                // Ensure we only consider enemies that are currently alive for chaining
+                let availableEnemies = enemies.filter(e => e.health > 0 && e !== hitEnemy && !this.piercedEnemies.has(e));
+                let chainCount = 0; // Track how many jumps happened in this instance
+
+                for (let i = 0; i < this.chainLevel; i++) {
+                    let closestEnemy = null;
+                    let minDist = chainRange;
+
+                    // Find the closest valid enemy to the current target
+                    availableEnemies.forEach(enemy => {
+                        // Double check health > 0 here as well
+                        if (enemy.health <= 0) return;
+                        const dist = distance(currentTarget.x, currentTarget.y, enemy.x, enemy.y);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestEnemy = enemy;
+                        }
+                    });
+
+                    if (closestEnemy) {
+                        const lightningDamage = this.damage * Math.pow(chainDamageFactor, i + 1); // Damage reduces per jump
+                        // Call takeDamage on the chained enemy
+                        closestEnemy.takeDamage(lightningDamage);
+                        this.piercedEnemies.add(closestEnemy); // Mark as hit by this bullet's chain
+                        chainedTargets++;
+                        chainCount++;
+
+                        // Add visual effect
+                        effects.push(new LightningEffect(currentTarget.x, currentTarget.y, closestEnemy.x, closestEnemy.y));
+                        sounds.lightning?.triggerAttackRelease("E5", "16n", Tone.now() + i * 0.05); // Stagger sound slightly
+
+                        // Prepare for next jump
+                        currentTarget = closestEnemy;
+                         // Remove the hit enemy from the available pool for the next jump
+                        availableEnemies = availableEnemies.filter(e => e !== closestEnemy);
+                        if (availableEnemies.length === 0) break; // No more valid targets
+                    } else {
+                        break; // No enemy found within range
+                    }
+                }
+                 // Update max chain achievement stat
+                 gameStats.maxChain = Math.max(gameStats.maxChain, chainCount);
+                 // Check achievements only if chain occurred
+                 if(chainCount > 0) checkAchievements();
+
+                 return chainedTargets; // Return how many enemies were chained
+            }
+        }
+
+        // ** New Class: EnemyBullet **
+        class EnemyBullet {
+            constructor(x, y, angle, speed, damage) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.speed = speed;
+                this.damage = damage;
+                this.radius = canvas.width * 0.006; // Slightly larger than player bullets
+                this.color = '#ff6666'; // Light red
+                this.remove = false; // Flag for removal
+            }
+
+            update() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+
+                // Check collision with player
+                if (player && distance(this.x, this.y, player.x, player.y) < this.radius + player.radius) {
+                    player.takeDamage(this.damage);
+                    this.remove = true; // Mark for removal
+                }
+
+                // Check off-screen
+                if (this.x < -this.radius || this.x > canvas.width + this.radius || this.y < -this.radius || this.y > canvas.height + this.radius) {
+                    this.remove = true;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // ** New Class: PowerUp **
+        class PowerUp {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.radius = canvas.width * 0.01;
+                this.lifespan = 600; // Frames before disappearing (10 seconds)
+                this.color = '#ffffff'; // Default white
+                this.symbol = '?';
+                this.duration = 5; // Default duration for timed powerups (seconds)
+                this.remove = false; // Flag for removal
+
+                switch(type) {
+                    case 'health':
+                        this.color = '#00ff00'; // Green
+                        this.symbol = '+';
+                        break;
+                    case 'rapidFire':
+                        this.color = '#ffff00'; // Yellow
+                        this.symbol = '🔥'; // Fire emoji (check browser compatibility) or 'F'
+                        this.duration = 8; // 8 seconds rapid fire
+                        break;
+                    // Add other types here (e.g., shield, score)
+                }
+            }
+
+            update() {
+                this.lifespan--;
+                if (this.lifespan <= 0) {
+                    this.remove = true; // Mark for removal
+                }
+            }
+
+            draw() {
+                // Draw outer circle
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw symbol inside
+                ctx.fillStyle = '#000'; // Black symbol
+                ctx.font = `${this.radius * 1.2}px 'Press Start 2P'`; // Scale font size
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.symbol, this.x, this.y + this.radius * 0.1); // Slight Y offset for better centering
+            }
+        }
+
+         // ** New Class: LightningEffect **
+        class LightningEffect {
+            constructor(startX, startY, endX, endY) {
+                this.startX = startX;
+                this.startY = startY;
+                this.endX = endX;
+                this.endY = endY;
+                this.lifespan = 15; // Frames (short duration)
+                this.color = `rgba(0, 191, 255, ${0.8 + Math.random() * 0.2})`; // Deep sky blue with opacity variation
+                this.lineWidth = Math.max(1, canvas.width * 0.002 + Math.random() * 2); // Base width + random jitter
+                this.remove = false; // Flag for removal
+            }
+
+            update() {
+                this.lifespan--;
+                if (this.lifespan <= 0) {
+                    this.remove = true;
+                }
+            }
+
+            draw() {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = this.lineWidth * (this.lifespan / 15); // Fade out width
+                ctx.beginPath();
+                ctx.moveTo(this.startX, this.startY);
+                // Add jaggedness (simple midpoint displacement)
+                const midX = (this.startX + this.endX) / 2 + (Math.random() - 0.5) * 20 * (this.lifespan / 15);
+                const midY = (this.startY + this.endY) / 2 + (Math.random() - 0.5) * 20 * (this.lifespan / 15);
+                ctx.quadraticCurveTo(midX, midY, this.endX, this.endY);
+                // ctx.lineTo(this.endX, this.endY); // Straight line alternative
+                ctx.stroke();
+            }
+        }
+
+
+        // --- Wave Features & Spawning ---
+        const waveFeatures = [ /* Keep as before */
+            { name: "Fast Enemies", apply: (waveData) => ({ ...waveData, speedMultiplier: 1.5, color: '#ff8800' }) },
+            { name: "Tanky Enemies", apply: (waveData) => ({ ...waveData, healthMultiplier: 2.0, sizeMultiplier: 1.2, color: '#cc00cc' }) },
+            { name: "Swarm Wave", apply: (waveData) => ({ ...waveData, countMultiplier: 2.0, healthMultiplier: 0.6, scoreMultiplier: 0.7, color: '#cccccc' }) },
+            { name: "Dodging Enemies", apply: (waveData) => ({ ...waveData, canDodge: true, color: '#00ffff' }) },
+            { name: "Regenerating Enemies", apply: (waveData) => ({ ...waveData, regenerates: true, color: '#00aa00'}) },
+        ];
+        function getRandomWaveFeature(currentWaveNum) { /* Keep as before */
+            const availableFeatures = waveFeatures.filter(f => f.name !== lastWaveFeature); if (availableFeatures.length === 0) availableFeatures.push(...waveFeatures);
+            const maxFeatureIndex = Math.min(waveFeatures.length - 1, Math.floor(currentWaveNum / 3)); if (maxFeatureIndex < 0) return null;
+            const featureChance = 0.3 + currentWaveNum * 0.03; if (Math.random() > featureChance) { lastWaveFeature = null; return null; }
+            const featureIndex = getRandomInt(0, maxFeatureIndex); const selectedFeature = availableFeatures[featureIndex % availableFeatures.length]; lastWaveFeature = selectedFeature.name; console.log(`Wave ${currentWaveNum} Feature: ${selectedFeature.name}`); return selectedFeature;
+        }
+
+        // Store the waveData used for the current wave to pass to Splitter children
+        let currentWaveData = {};
+
+        function startNextWave() {
+            if (gameState !== 'playing') return;
+
+            currentWave++;
+            waveActive = true;
+            enemies = [];
+            bullets = [];
+            enemyBullets = []; // Clear enemy bullets
+            powerUps = []; // Clear remaining powerups
+            effects = []; // Clear visual effects
+            const baseEnemyCount = 5 + currentWave * 2;
+             // Reset and store current wave data
+             currentWaveData = {
+                countMultiplier: 1.0, speedMultiplier: 1.0, healthMultiplier: 1.0,
+                sizeMultiplier: 1.0, scoreMultiplier: 1.0, canDodge: false,
+                regenerates: false, color: '#ff0000', isBoss: false,
+            };
+
+            // Apply random feature
+            const feature = getRandomWaveFeature(currentWave);
+            if (feature) { currentWaveData = feature.apply(currentWaveData); }
+
+            // Boss wave logic
+            if (currentWave > 0 && currentWave % 5 === 0) {
+                currentWaveData = {
+                    countMultiplier: 0.1 * (1 + currentWave * 0.05), healthMultiplier: 8 + currentWave * 0.5,
+                    sizeMultiplier: 2.5, speedMultiplier: 0.7, scoreMultiplier: 5 + currentWave,
+                    color: '#ff4444', canDodge: false, regenerates: true, isBoss: true,
+                };
+                console.log(`Wave ${currentWave} Feature: Boss Wave!`); lastWaveFeature = "Boss Wave";
+            }
+
+            const enemyCount = Math.max(1, Math.floor(baseEnemyCount * currentWaveData.countMultiplier * getRandomInt(8, 12) / 10));
+
+            // --- Enemy Spawning with Types ---
+            for (let i = 0; i < enemyCount; i++) {
+                let enemyType = 'basic';
+                 const typeRoll = Math.random();
+                 if (!currentWaveData.isBoss) { // Don't spawn special types on boss waves
+                     if (currentWave > 3 && typeRoll < 0.25) { enemyType = 'shooter'; }
+                     else if (currentWave > 5 && typeRoll < 0.40) { enemyType = 'splitter'; }
+                 }
+                // Pass the stored currentWaveData to the spawn function
+                spawnEnemy(currentWaveData, enemyType);
+            }
+
+            sounds.waveStart?.triggerAttackRelease("G4", "4n", Tone.now());
+            updateUI();
+        }
+
+        // Modified spawnEnemy to accept waveData directly
+        function spawnEnemy(waveDataToSpawn, type = 'basic') {
+             let x, y; /* Spawning position logic - keep as before */
+             const side = Math.random(); const spawnMargin = canvas.width * 0.05;
+             if (side < 0.25) { x = Math.random() * canvas.width; y = -spawnMargin; }
+             else if (side < 0.5) { x = Math.random() * canvas.width; y = canvas.height + spawnMargin; }
+             else if (side < 0.75) { x = -spawnMargin; y = Math.random() * canvas.height; }
+             else { x = canvas.width + spawnMargin; y = Math.random() * canvas.height; }
+
+             // Instantiate correct enemy type, passing the waveData
+             switch(type) {
+                 case 'shooter':
+                     enemies.push(new ShooterEnemy(x, y, waveDataToSpawn));
+                     break;
+                 case 'splitter':
+                      // Pass the specific waveData used for this wave
+                      enemies.push(new SplitterEnemy(x, y, waveDataToSpawn));
+                      break;
+                 default: // Basic or Boss
+                     enemies.push(new Enemy(x, y, waveDataToSpawn));
+                     break;
+             }
+        }
+
+         function spawnPowerUp(x, y) {
+             const availableTypes = ['health', 'rapidFire']; // Add more types later
+             const type = availableTypes[getRandomInt(0, availableTypes.length - 1)];
+             powerUps.push(new PowerUp(x, y, type));
+             console.log(`Spawning power-up: ${type} at ${Math.round(x)}, ${Math.round(y)}`);
+         }
+
+        // --- Game Logic & Loop ---
+        function setGameState(newState) { /* Keep as before */
+             console.log(`Changing state from ${gameState} to ${newState}`); gameState = newState;
+             uiContainer.classList.toggle('visible', gameState === 'playing' || gameState === 'shop');
+             powerupIndicator.style.display = (gameState === 'playing' && powerupIndicator.textContent) ? 'block' : 'none'; // Show indicator only if playing and has text
+             startScreen.style.display = (gameState === 'start') ? 'flex' : 'none';
+             shopScreen.style.display = (gameState === 'shop') ? 'flex' : 'none';
+             achievementsScreen.style.display = (gameState === 'achievements') ? 'flex' : 'none';
+             messageBox.style.display = (gameState === 'gameover') ? 'block' : 'none';
+        }
+
+        function startGame() { /* Keep as before */
+            resizeCanvas(); difficultyModifier = parseFloat(document.querySelector('input[name="difficulty"]:checked').value); startBonus = document.querySelector('input[name="startBonus"]:checked').value;
+            enemies = []; bullets = []; enemyBullets = []; powerUps = []; effects = []; currentWave = 0; score = 0; waveActive = false; shopRefreshNeeded = true;
+            playerStats = { ...basePlayerStats }; gameStats = { enemiesKilled: 0, upgradesBought: 0, scoreSpent: 0, closeCallOccurred: false, maxChain: 0 }; resetUpgradeLevels();
+            if (startBonus === 'health') { playerStats.maxHealth += 20; } else if (startBonus === 'firerate') { playerStats.fireRate *= 0.9; } else if (startBonus === 'score') { score = 50; }
+            player = new Player(canvas.width / 2, canvas.height / 2); player.health = playerStats.maxHealth;
+            setGameState('playing'); startNextWave(); if (!gameLoopId) { gameLoop(); } updateUI();
+        }
+
+        function updateGame() {
+            if (gameState !== 'playing') return;
+
+            player?.update();
+
+            // --- Update Player Bullets & Check Collisions ---
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.update();
+                let bulletRemoved = false;
+
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    // Skip collision check if enemy is already dead
+                    if (enemy.health <= 0 || enemy.isDead) continue;
+
+                    const dist = distance(enemy.x, enemy.y, bullet.x, bullet.y);
+
+                    if (dist < enemy.radius + bullet.radius && !bullet.piercedEnemies.has(enemy)) {
+                        const damageDealt = bullet.damage;
+                        // Call takeDamage - it now handles the isDead flag internally
+                        enemy.takeDamage(damageDealt);
+                        bullet.piercedEnemies.add(enemy);
+
+                        // Chain Lightning Trigger (only if enemy health dropped below zero *after* taking damage)
+                        if (enemy.health <= 0) {
+                             const chainedHits = bullet.tryChainLightning(enemy);
+                             bullet.chainLevel -= chainedHits;
+                        }
+
+
+                        bullet.piercing--;
+                        if (bullet.piercing < 0) {
+                            bullets.splice(i, 1);
+                            bulletRemoved = true;
+                            break;
+                        }
+                    }
+                }
+                // Remove bullets off-screen
+                if (!bulletRemoved && (bullet.x < -bullet.radius || bullet.x > canvas.width + bullet.radius || bullet.y < -bullet.radius || bullet.y > canvas.height + bullet.radius)) {
+                    bullets.splice(i, 1);
+                }
+            }
+
+            // --- Update Enemy Bullets ---
+            for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                 const eb = enemyBullets[i];
+                 eb.update();
+                 if (eb.remove) {
+                     enemyBullets.splice(i, 1);
+                 }
+            }
+
+            // --- Update Enemies & Remove Dead Ones ---
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                 // Simplified removal check: Only check health.
+                 // The isDead flag in takeDamage prevents duplicate death processing.
+                 if (enemy.health <= 0) {
+                     // Ensure split logic runs if applicable (it's called within takeDamage now)
+                     enemies.splice(i, 1);
+                 } else {
+                     enemy.update(); // Only update living enemies
+                 }
+            }
+
+             // --- Update PowerUps & Check Collection ---
+             for (let i = powerUps.length - 1; i >= 0; i--) {
+                 const powerUp = powerUps[i];
+                 powerUp.update();
+                 if (powerUp.remove) {
+                     powerUps.splice(i, 1);
+                 } else if (player && distance(player.x, player.y, powerUp.x, powerUp.y) < player.radius + powerUp.radius + playerStats.pickupRadius) {
+                     player.collectPowerUp(powerUp);
+                     powerUps.splice(i, 1);
+                 }
+             }
+
+             // --- Update Effects ---
+             for (let i = effects.length - 1; i >= 0; i--) {
+                 const effect = effects[i];
+                 effect.update();
+                 if (effect.remove) {
+                     effects.splice(i, 1);
+                 }
+             }
+
+
+            // --- Check Wave End ---
+            if (waveActive && enemies.length === 0) {
+                waveActive = false; console.log(`Wave ${currentWave} cleared!`);
+                if (player && player.health / playerStats.maxHealth < 0.10) { gameStats.closeCallOccurred = true; }
+                // Ensure all effects are cleared before shop
+                effects = [];
+                enterShop();
+            }
+        }
+
+        function drawGame() { /* Keep as before */
+            if (!ctx) { console.error("Canvas context is not available."); return; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (gameState === 'playing' || gameState === 'shop') {
+                 powerUps.forEach(p => p.draw());
+                 bullets.forEach(b => b.draw());
+                 enemyBullets.forEach(eb => eb.draw());
+                 enemies.forEach(e => e.draw()); // Enemy draw now checks health internally
+                 player?.draw();
+                 effects.forEach(ef => ef.draw());
+            }
+        }
+
+        function gameLoop() { /* Keep as before */
+            gameLoopId = requestAnimationFrame(gameLoop);
+            if (gameState === 'playing') { updateGame(); }
+            if (canvas.width > 0 && canvas.height > 0) { drawGame(); }
+            updateUI();
+        }
+
+        function updateUI() { /* Keep as before */
+            if (!player) return;
+            healthDisplay.textContent = `Health: ${Math.ceil(player.health)} / ${Math.ceil(playerStats.maxHealth)}`;
+            waveDisplay.textContent = `Wave: ${currentWave}`;
+            scoreDisplay.textContent = `Score: ${score}`;
+            // Filter enemies being displayed count to only living ones, just in case removal lags visually
+            const livingEnemies = enemies.filter(e => e.health > 0).length;
+            enemyDisplay.textContent = `Enemies: ${livingEnemies}`;
+            const healthPercent = player.health / playerStats.maxHealth;
+            let healthColor = '#ff0000'; if (healthPercent > 0.6) healthColor = '#00ff00'; else if (healthPercent > 0.3) healthColor = '#ffff00';
+            healthDisplay.style.color = healthColor;
+        }
+
+        function addScore(amount) { /* Keep as before */
+             if (amount > 0) { score += Math.floor(amount * playerStats.scoreMultiplier); }
+        }
+
+        // --- Shop Logic (definitions kept as before) ---
+        const shopUpgradeDefs = [
+            { id: "maxHealth", name: "Max Health", description: "+20 Max Health", cost: 100, costIncrease: 1.5, maxLevel: 10, level: 0, apply: () => { playerStats.maxHealth += 20; player.health += 20; } },
+            { id: "healthRegen", name: "Health Regen", description: "+50% Regen Rate", cost: 150, costIncrease: 1.8, maxLevel: 5, level: 0, apply: () => { playerStats.healthRegen *= 1.5; } },
+            { id: "speed", name: "Move Speed", description: "+10% Speed", cost: 120, costIncrease: 1.6, maxLevel: 8, level: 0, apply: () => { playerStats.speed *= 1.1; } },
+            { id: "fireRate", name: "Fire Rate", description: "-10% Shoot Cooldown", cost: 200, costIncrease: 1.7, maxLevel: 10, level: 0, apply: () => { playerStats.fireRate = Math.max(1, playerStats.fireRate * 0.9); } },
+            { id: "bulletDamage", name: "Bullet Damage", description: "+25% Damage", cost: 180, costIncrease: 1.6, maxLevel: 10, level: 0, apply: () => { playerStats.bulletDamage *= 1.25; } },
+            { id: "bulletSpeed", name: "Bullet Speed", description: "+15% Bullet Speed", cost: 80, costIncrease: 1.4, maxLevel: 7, level: 0, apply: () => { playerStats.bulletSpeed *= 1.15; } },
+            { id: "piercing", name: "Piercing", description: "+1 Pierce Count", cost: 300, costIncrease: 2.0, maxLevel: 5, level: 0, apply: () => { playerStats.piercing++; } },
+            { id: "homing", name: "Homing", description: "+ Homing Strength", cost: 400, costIncrease: 2.2, maxLevel: 3, level: 0, apply: () => { playerStats.homingStrength += 0.1; } },
+            { id: "multiShot", name: "Multi-Shot", description: "+1 Bullet per Shot", cost: 500, costIncrease: 2.5, maxLevel: 4, level: 0, apply: () => { playerStats.multiShotLevel++; } },
+            { id: "chainLightning", name: "Chain Lightning", description: "+1 Chain Jump", cost: 600, costIncrease: 2.8, maxLevel: 4, level: 0, apply: () => { playerStats.chainLightningLevel++; } },
+            { id: "scoreMultiplier", name: "Score Gain", description: "+10% Score Multiplier", cost: 500, costIncrease: 2.5, maxLevel: 4, level: 0, apply: () => { playerStats.scoreMultiplier += 0.1; } },
+            { id: "pickupRadius", name: "Pickup Radius", description: "+25% Pickup Radius", cost: 50, costIncrease: 1.3, maxLevel: 5, level: 0, apply: () => { playerStats.pickupRadius *= 1.25; } },
+        ];
+        function resetUpgradeLevels() { /* Keep as before */ shopUpgradeDefs.forEach(def => { def.level = 0; }); }
+        function calculateUpgradeCost(upgrade) { /* Keep as before */ const level = Math.max(0, Math.min(upgrade.level, upgrade.maxLevel -1)); return Math.floor(upgrade.cost * Math.pow(upgrade.costIncrease, level)); }
+        function populateShop() { /* Keep as before */
+            shopItemsContainer.innerHTML = ''; shopScoreDisplay.textContent = score;
+            shopUpgradeDefs.forEach(upgrade => {
+                const itemDiv = document.createElement('div'); itemDiv.classList.add('shopItem');
+                const nameH3 = document.createElement('h3'); const levelText = upgrade.level >= upgrade.maxLevel ? " (MAX)" : ` (${upgrade.level}/${upgrade.maxLevel})`; nameH3.textContent = `${upgrade.name}${levelText}`;
+                const descP = document.createElement('p'); descP.textContent = upgrade.description;
+                const costP = document.createElement('p'); costP.classList.add('cost'); const currentCost = calculateUpgradeCost(upgrade);
+                const buyButton = document.createElement('button'); buyButton.onclick = () => buyUpgrade(upgrade.id);
+                 if (upgrade.level >= upgrade.maxLevel) { costP.textContent = "Max Level"; buyButton.textContent = 'Maxed'; buyButton.disabled = true; }
+                 else { costP.textContent = `Cost: ${currentCost}`; buyButton.textContent = 'Buy'; buyButton.disabled = score < currentCost; }
+                itemDiv.appendChild(nameH3); itemDiv.appendChild(descP); itemDiv.appendChild(costP); itemDiv.appendChild(buyButton); shopItemsContainer.appendChild(itemDiv);
+            });
+             shopRefreshNeeded = false;
+        }
+        function buyUpgrade(upgradeId) { /* Keep as before */
+            const upgrade = shopUpgradeDefs.find(u => u.id === upgradeId); if (!upgrade || upgrade.level >= upgrade.maxLevel) return;
+            const cost = calculateUpgradeCost(upgrade);
+            if (score >= cost) {
+                score -= cost; gameStats.scoreSpent += cost; upgrade.level++; upgrade.apply(); gameStats.upgradesBought++;
+                if (upgrade.id === 'maxHealth') { player.health = Math.min(player.health + 20, playerStats.maxHealth); }
+                sounds.upgrade?.triggerAttackRelease("C5", "4n", Tone.now()); shopRefreshNeeded = true; populateShop(); updateUI(); checkAchievements();
+            }
+        }
+        function enterShop() { /* Keep as before */ checkAchievements(); setGameState('shop'); if (shopRefreshNeeded) { populateShop(); } }
+        function exitShop() { /* Keep as before */ setGameState('playing'); shopRefreshNeeded = true; startNextWave(); }
+
+        // --- Achievements Logic (kept as before) ---
+        function checkAchievements() { /* Keep as before */
+            let newAchievementUnlocked = false;
+            Object.keys(achievements).forEach(key => {
+                const ach = achievements[key]; const conditionMet = (key === 'highScore') ? ach.condition() : ach.condition(gameStats);
+                if (!ach.unlocked && conditionMet) { ach.unlocked = true; newAchievementUnlocked = true; showAchievementPopup(ach.name); saveAchievements(); updateAchievementsScreen(); console.log(`Achievement Unlocked: ${ach.name}`); }
+            });
+            if (newAchievementUnlocked) { sounds.achievement?.triggerAttackRelease(["C4", "E4", "G4"], "4n", Tone.now()); }
+        }
+        function showAchievementPopup(name) { /* Keep as before */
+            achievementPopupText.textContent = name; achievementPopup.style.display = 'block';
+            if (achievementPopup.timeoutId) { clearTimeout(achievementPopup.timeoutId); }
+            achievementPopup.timeoutId = setTimeout(() => { achievementPopup.style.display = 'none'; achievementPopup.timeoutId = null; }, 4000);
+        }
+        function populateAchievementsScreen() { /* Keep as before */
+            achievementsListContainer.innerHTML = ''; Object.values(achievements).forEach(ach => { const achDiv = document.createElement('div'); achDiv.classList.add('achievement'); if (ach.unlocked) { achDiv.classList.add('unlocked'); } const nameH3 = document.createElement('h3'); nameH3.textContent = ach.name; const descP = document.createElement('p'); descP.textContent = ach.description; achDiv.appendChild(nameH3); achDiv.appendChild(descP); achievementsListContainer.appendChild(achDiv); });
+        }
+        function updateAchievementsScreen() { /* Keep as before */ if (gameState === 'achievements') { populateAchievementsScreen(); } }
+        function showAchievements() { /* Keep as before */ setGameState('achievements'); populateAchievementsScreen(); }
+        function hideAchievements() { /* Keep as before */ setGameState('start'); }
+        function saveAchievements() { /* Keep as before */ try { const unlockedStatus = {}; Object.keys(achievements).forEach(key => { unlockedStatus[key] = achievements[key].unlocked; }); localStorage.setItem('waveDefenseAchievements_v2', JSON.stringify(unlockedStatus)); } catch (e) { console.error("Failed to save achievements:", e); } } // Incremented version
+        function loadAchievements() { /* Keep as before */ try { const savedStatus = localStorage.getItem('waveDefenseAchievements_v2'); if (savedStatus) { const unlockedStatus = JSON.parse(savedStatus); Object.keys(achievements).forEach(key => { if (unlockedStatus[key] !== undefined && achievements[key]) { achievements[key].unlocked = unlockedStatus[key]; } }); console.log("Loaded achievements:", unlockedStatus); } } catch (e) { console.error("Failed to load achievements:", e); localStorage.removeItem('waveDefenseAchievements_v2'); } } // Use incremented version
+
+
+        // --- Game Over (kept as before) ---
+        function gameOver() { /* Keep as before */
+             if (gameState === 'gameover') return; console.log("Game Over triggered"); sounds.gameOver?.triggerAttackRelease("C3", "1n", Tone.now()); checkAchievements(); setGameState('gameover'); messageTitle.textContent = "Game Over!"; const wavesSurvived = Math.max(0, currentWave - 1); messageText.textContent = `You survived ${wavesSurvived} wave${wavesSurvived === 1 ? '' : 's'} and scored ${score}.`; messageButton.textContent = "Restart"; messageButton.onclick = startGame;
+        }
+
+        // --- Event Listeners (kept as before) ---
+        window.addEventListener('keydown', (e) => { /* Keep as before */ keys[e.key.toLowerCase()] = true; if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) { e.preventDefault(); } });
+        window.addEventListener('keyup', (e) => { /* Keep as before */ keys[e.key.toLowerCase()] = false; });
+        function getMousePos(canvas, evt) { /* Keep as before */ const rect = canvas.getBoundingClientRect(); const scaleX = canvas.width / rect.width; const scaleY = canvas.height / rect.height; return { x: (evt.clientX - rect.left) * scaleX, y: (evt.clientY - rect.top) * scaleY } }
+        canvas.addEventListener('mousemove', (e) => { /* Keep as before */ const pos = getMousePos(canvas, e); mouse.x = pos.x; mouse.y = pos.y; });
+        window.addEventListener('mousedown', (e) => { /* Keep as before */ if (e.button === 0) { Tone.start(); if (e.target === canvas) { mouse.down = true; } } });
+        window.addEventListener('mouseup', (e) => { /* Keep as before */ if (e.button === 0) { mouse.down = false; } });
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault()); /* Keep as before */
+        startButton.addEventListener('click', () => { Tone.start(); startGame(); }); /* Keep as before */
+        continueButton.addEventListener('click', exitShop); /* Keep as before */
+        achievementsButton.addEventListener('click', showAchievements); /* Keep as before */
+        backToStartButton.addEventListener('click', hideAchievements); /* Keep as before */
+
+        // --- Initialization (kept as before) ---
+        function resizeCanvas() { /* Keep as before */
+             const container = gameContainer; const containerWidth = container.clientWidth; const containerHeight = container.clientHeight; const targetAspectRatio = 16 / 9; let newWidth = containerWidth; let newHeight = containerWidth / targetAspectRatio; if (newHeight > containerHeight) { newHeight = containerHeight; newWidth = containerHeight * targetAspectRatio; } newWidth = Math.max(1, Math.floor(newWidth)); newHeight = Math.max(1, Math.floor(newHeight));
+             if (canvas.width !== newWidth || canvas.height !== newHeight) { canvas.width = newWidth; canvas.height = newHeight; console.log(`Canvas resized to: ${canvas.width}x${canvas.height}`); if (player && (gameState === 'playing' || gameState === 'shop')) { player.radius = canvas.width * 0.015; player.baseSpeed = canvas.width * 0.003; player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x)); player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y)); } }
+             canvas.style.width = `${newWidth}px`; canvas.style.height = `${newHeight}px`; if (gameState === 'playing' || gameState === 'shop') { drawGame(); }
+        }
+        window.addEventListener('resize', resizeCanvas); /* Keep as before */
+        setTimeout(() => { /* Keep as before */ resizeCanvas(); if (!gameLoopId) { gameLoop(); } setGameState('start'); }, 100);
+
+    </script>
+</body>
+</html>
