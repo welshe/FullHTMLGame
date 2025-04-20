@@ -1,6 +1,5 @@
 Updates : 
-
-Fixed the 10 placeholder abilitys and now they are functioning
+Fixed the annoying splitter enemies instantly killing the player upon death of big enemy
 
 Core Gameplay:
 
