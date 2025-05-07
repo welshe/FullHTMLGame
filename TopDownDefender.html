@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Top Down Defender</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="fps">FPS: 0</div>
+<canvas id="gameCanvas"></canvas>
+
+<div id="shop">
+    <h2>Shop</h2>
+    <div class="shop-content">
+        <div id="shop-upgrades-section">
+            <h3 class="shop-item-category">Upgrades</h3>
+            <div id="shop-upgrades-items" class="shop-items-column">
+                </div>
+        </div>
+        <div id="shop-passives-section">
+            <h3 class="shop-item-category">Passive Items</h3>
+            <div id="shop-passives-items" class="shop-items-column">
+                </div>
+        </div>
+    </div>
+    <p class="shop-coins-display">Coins: <span id="player-coins">0</span></p>
+    <button onclick="closeShop()">Continue Wave</button>
+</div>
+
+<div id="achievement-notification">Achievement Unlocked!</div>
+<div id="game-message"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
