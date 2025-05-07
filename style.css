@@ -1,0 +1,326 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap');
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #0a0f14;
+    color: #e0e0e0;
+    font-family: 'Roboto', sans-serif;
+}
+
+canvas {
+    display: block;
+    cursor: crosshair;
+}
+
+#fps {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    color: #88aaff;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 14px;
+    z-index: 10;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+
+/* --- Shop Styling --- */
+#shop {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: linear-gradient(145deg, #1c2837, #121a24); /* Slightly lighter dark gradient */
+    color: #e0e0e0;
+    padding: 25px 35px; /* Adjusted padding */
+    border: 2px solid #00ffff;
+    border-radius: 20px;
+    display: none;
+    opacity: 0;
+    z-index: 20;
+    width: 90vw;
+    max-width: 900px; /* Increased max-width for more space */
+    max-height: 90vh; /* Allow shop to be taller */
+    text-align: center;
+    box-shadow: 0 0 40px rgba(0, 200, 255, 0.35), 0 0 20px rgba(0, 255, 255, 0.25) inset;
+    font-family: 'Roboto', sans-serif;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    display: flex; /* Use flexbox for overall shop structure */
+    flex-direction: column; /* Stack title, content, coins, button vertically */
+}
+
+#shop.visible {
+    display: flex; /* Keep as flex when visible */
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#shop h2 {
+    margin-top: 0;
+    color: #00ff99;
+    margin-bottom: 20px; /* Reduced margin */
+    font-family: 'Press Start 2P', cursive;
+    font-size: 28px; /* Slightly smaller if needed */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(0, 255, 153, 0.7);
+    flex-shrink: 0; /* Prevent title from shrinking */
+}
+
+.shop-content {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 25px; /* Reduced gap */
+    margin-bottom: 20px; /* Reduced margin */
+    overflow-y: auto; /* Allow content (columns) to scroll if they overflow */
+    flex-grow: 1; /* Allow content to take available vertical space */
+    padding: 10px; /* Add some padding for scrollbar */
+    background-color: rgba(0,0,0,0.1); /* Slight background for scrolling area */
+    border-radius: 10px;
+}
+
+/* Custom Scrollbar for Shop Content (Webkit browsers) */
+.shop-content::-webkit-scrollbar {
+    width: 10px;
+}
+.shop-content::-webkit-scrollbar-track {
+    background: rgba(10, 20, 30, 0.5);
+    border-radius: 10px;
+}
+.shop-content::-webkit-scrollbar-thumb {
+    background: #00aabb;
+    border-radius: 10px;
+}
+.shop-content::-webkit-scrollbar-thumb:hover {
+    background: #00ffff;
+}
+
+
+#shop-upgrades-section,
+#shop-passives-section {
+    flex: 1;
+    min-width: 0;
+    padding: 0 10px; /* Padding inside columns */
+    /* Removed max-height from columns, parent .shop-content handles scroll */
+}
+
+
+.shop-item-category {
+    font-size: 1.4em; /* Slightly smaller */
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #FFD700;
+    border-bottom: 2px solid #00aabb;
+    padding-bottom: 8px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Press Start 2P', cursive;
+    font-size: 16px; /* Smaller category title */
+    position: sticky; /* Make category headers sticky within their scrolling column */
+    top: -10px; /* Adjust based on .shop-content padding */
+    background: linear-gradient(145deg, #1c2837, #121a24); /* Match shop background to cover scrolled items */
+    z-index: 1; /* Ensure it's above items */
+    padding-top: 10px; /* Add padding to sticky header */
+}
+
+
+.shop-item {
+    background-color: rgba(0, 60, 90, 0.75); /* Slightly adjusted color */
+    margin-bottom: 10px; /* Reduced margin */
+    padding: 12px; /* Reduced padding */
+    border: 1px solid #0099bb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+}
+.shop-item:last-child {
+    margin-bottom: 0; /* Remove margin from last item in a column */
+}
+
+
+.shop-item:hover {
+    background-color: rgba(0, 100, 140, 0.9);
+    transform: scale(1.015); /* Slightly less aggressive scale */
+    box-shadow: 0 4px 12px rgba(0, 180, 220, 0.35);
+}
+
+.shop-item[style*="opacity: 0.6"] { /* Targeting the opacity set in JS for disabled items */
+    background-color: rgba(40, 50, 60, 0.6);
+    border-color: #445566;
+    color: #778899;
+    cursor: not-allowed !important;
+}
+.shop-item[style*="opacity: 0.6"]:hover {
+    transform: none;
+    box-shadow: none;
+}
+.shop-item[style*="background-color: rgba(80, 80, 100, 0.5)"] { /* Targeting MAXED items */
+     color: #aaaaaa;
+}
+
+
+.shop-item-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    margin-right: 10px; /* Space before cost */
+    overflow: hidden; /* Prevent long descriptions from breaking layout */
+}
+
+.shop-item-name { /* Item name */
+    font-size: 15px; /* Adjusted size */
+    font-weight: bold;
+    color: #ccffff;
+    white-space: nowrap; /* Keep name on one line */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Add ellipsis if name is too long */
+}
+.shop-item-description {
+    font-size: 11px; /* Smaller description */
+    color: #aaccdd; /* Lighter description */
+    margin-top: 3px;
+    white-space: normal; /* Allow description to wrap */
+}
+
+
+.shop-item-cost {
+    color: #FFD700;
+    font-weight: bold;
+    font-size: 14px !important; /* Adjusted size */
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.shop-coins-display {
+    font-size: 18px; /* Adjusted size */
+    color: #FFD700;
+    font-weight: bold;
+    margin-top: 15px; /* Reduced margin */
+    margin-bottom: 20px; /* Reduced margin */
+    font-family: 'Press Start 2P', cursive;
+    flex-shrink: 0; /* Prevent from shrinking */
+}
+.shop-coins-display #player-coins{
+    color: #FFF;
+}
+
+
+#shop button {
+    padding: 14px 28px; /* Adjusted padding */
+    background: linear-gradient(145deg, #00ff99, #00cc7a);
+    color: #051520;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px; /* Adjusted size */
+    font-weight: bold;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: 'Press Start 2P', cursive;
+    box-shadow: 0 4px 0 #008855, 0 6px 10px rgba(0,0,0,0.3);
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+#shop button:hover {
+    background: linear-gradient(145deg, #00e68a, #00b36b);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #007744, 0 8px 12px rgba(0,0,0,0.4);
+}
+#shop button:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 0 #007744, 0 5px 8px rgba(0,0,0,0.3);
+}
+
+
+/* --- Notifications --- */
+#achievement-notification, #game-message {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background-color: rgba(10, 25, 40, 0.95);
+    padding: 20px 35px;
+    border-radius: 12px;
+    display: none;
+    opacity: 0;
+    z-index: 30;
+    font-family: 'Roboto', sans-serif;
+    font-size: 22px;
+    text-align: center;
+    border: 2px solid;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+#achievement-notification.visible, #game-message.visible {
+    display: block; /* Or flex/grid if needed for internal alignment */
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+
+#achievement-notification {
+    bottom: 30px;
+    color: #FFD700;
+    border-color: #FFD700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+#game-message {
+    top: 15%;
+    color: #00ffff;
+    border-color: #00ffff;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+/* Media Query for smaller screens */
+@media (max-width: 768px) { /* Adjusted breakpoint */
+    #shop {
+        padding: 20px 15px; /* Less horizontal padding */
+        max-width: 95vw;
+    }
+    .shop-content {
+        flex-direction: column; /* Stack columns on smaller screens */
+        gap: 15px;
+        padding: 5px; /* Less padding for scroll area */
+    }
+    #shop-upgrades-section,
+    #shop-passives-section {
+        padding: 0 5px; /* Less padding inside columns */
+    }
+    #shop h2 {
+        font-size: 22px; /* Smaller title */
+        margin-bottom: 15px;
+    }
+    .shop-item-category {
+        font-size: 14px; /* Smaller category */
+        padding-bottom: 6px;
+        margin-bottom: 10px;
+    }
+    .shop-item {
+        padding: 10px;
+    }
+    .shop-item-name {
+        font-size: 13px;
+    }
+    .shop-item-description {
+        font-size: 10px;
+    }
+    .shop-item-cost {
+        font-size: 12px !important;
+    }
+    #shop button {
+        font-size: 16px;
+        padding: 12px 20px;
+    }
+    .shop-coins-display {
+        font-size: 16px;
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+}
